@@ -91,7 +91,7 @@ Doc.group(
 
 By declaring a group, we have specified that the contents of each group can be flattened onto a single line if there is enough space.
 
-As a result, the first call to `render(Int)` renders a space-separated list, whereas the second call renders as a newline separated list. The width of 5 characters provided to the render method in the second call does not allow enough space for the entire group to render on a single line.
+As a result, the first call to `render(int)` renders a space-separated list, whereas the second call renders as a newline separated list. The width of 5 characters provided to the render method in the second call does not allow enough space for the entire group to render on a single line.
 
 ## Acknowlegements
 
