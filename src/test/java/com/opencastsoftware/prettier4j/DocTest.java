@@ -1,7 +1,6 @@
 package com.opencastsoftware.prettier4j;
 
-import static com.opencastsoftware.prettier4j.Doc.empty;
-import static com.opencastsoftware.prettier4j.Doc.text;
+import static com.opencastsoftware.prettier4j.Doc.*;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.is;
@@ -11,8 +10,11 @@ import java.util.Collections;
 
 import org.junit.jupiter.api.Test;
 
+import com.jparams.verifier.tostring.ToStringVerifier;
+
 import net.jqwik.api.*;
 import net.jqwik.api.constraints.IntRange;
+import nl.jqno.equalsverifier.EqualsVerifier;
 
 public class DocTest {
     /** The example tree data structure from the original paper */
@@ -52,6 +54,185 @@ public class DocTest {
                 "]";
 
         assertThat(exampleTree.showPrime().render(30), is(equalTo(expected)));
+    }
+
+    @Test
+    void testAppendSpace() {
+        String expected = "one two three";
+        String actual = group(text("one")
+                .appendSpace(text("two"))
+                .appendSpace(text("three")))
+                .render(30);
+        assertThat(actual, is(equalTo(expected)));
+    }
+
+    @Test
+    void testAppendSpaceFlattening() {
+        String expected = "one two three";
+        String actual = group(text("one")
+                .appendSpace(text("two"))
+                .appendSpace(text("three")))
+                .render(5);
+        assertThat(actual, is(equalTo(expected)));
+    }
+
+    @Test
+    void testAppendLine() {
+        String expected = "one\ntwo\nthree";
+        String actual = group(text("one")
+                .appendLine(text("two"))
+                .appendLine(text("three")))
+                .render(30);
+        assertThat(actual, is(equalTo(expected)));
+    }
+
+    @Test
+    void testAppendLineFlattening() {
+        String expected = "one\ntwo\nthree";
+        String actual = group(text("one")
+                .appendLine(text("two"))
+                .appendLine(text("three")))
+                .render(5);
+        assertThat(actual, is(equalTo(expected)));
+    }
+
+    @Test
+    void testAppendLineOrSpace() {
+        String expected = "one two three";
+        String actual = group(text("one")
+                .appendLineOrSpace(text("two"))
+                .appendLineOrSpace(text("three")))
+                .render(30);
+        assertThat(actual, is(equalTo(expected)));
+    }
+
+    @Test
+    void testAppendLineOrSpaceFlattening() {
+        String expected = "one\ntwo\nthree";
+        String actual = group(text("one")
+                .appendLineOrSpace(text("two"))
+                .appendLineOrSpace(text("three")))
+                .render(5);
+        assertThat(actual, is(equalTo(expected)));
+    }
+
+    @Test
+    void testAppendLineOrEmpty() {
+        String expected = "onetwothree";
+        String actual = group(text("one")
+                .appendLineOrEmpty(text("two"))
+                .appendLineOrEmpty(text("three")))
+                .render(30);
+        assertThat(actual, is(equalTo(expected)));
+    }
+
+    @Test
+    void testAppendLineOrEmptyFlattening() {
+        String expected = "one\ntwo\nthree";
+        String actual = group(text("one")
+                .appendLineOrEmpty(text("two"))
+                .appendLineOrEmpty(text("three")))
+                .render(5);
+        assertThat(actual, is(equalTo(expected)));
+    }
+
+    @Test
+    void testAppendLineOr() {
+        String expected = "one; two; three";
+        String altText = "; ";
+        String actual = group(text("one")
+                .appendLineOr(altText, text("two"))
+                .appendLineOr(altText, text("three")))
+                .render(30);
+        assertThat(actual, is(equalTo(expected)));
+    }
+
+    @Test
+    void testAppendLineOrFlattening() {
+        String expected = "one\ntwo\nthree";
+        String altText = "; ";
+        String actual = group(text("one")
+                .appendLineOr(altText, text("two"))
+                .appendLineOr(altText, text("three")))
+                .render(5);
+        assertThat(actual, is(equalTo(expected)));
+    }
+
+    /**
+     * This property represents the observation that an atomic token must render
+     * as nothing more than its text content.
+     */
+    @Property
+    void textRenderEquivalentToIdentity(
+            @ForAll @IntRange(min = 5, max = 200) int width,
+            @ForAll String text) {
+        String rendered = text(text).render(width);
+        assertThat(rendered, is(equalTo(text)));
+    }
+
+    /**
+     * This property represents the observation that grouping does
+     * not affect text nodes.
+     */
+    @Property
+    void groupTextEquivalentToIdentity(
+            @ForAll @IntRange(min = 5, max = 200) int width,
+            @ForAll String text) {
+        String rendered = group(text(text)).render(width);
+        assertThat(rendered, is(equalTo(text)));
+    }
+
+    /**
+     * This property observes the left unit law mentioned
+     * in the original paper:
+     *
+     * <pre>
+     * x <> nil = x
+     * </pre>
+     */
+    @Property
+    void leftUnitLaw(
+            @ForAll @IntRange(min = 5, max = 200) int width,
+            @ForAll("docs") Doc doc) {
+        String appended = doc.append(empty()).render(width);
+        String original = doc.render(width);
+        assertThat(appended, is(equalTo(original)));
+    }
+
+    /**
+     * This property observes the right unit law mentioned
+     * in the original paper:
+     *
+     * <pre>
+     * nil <> x = x
+     * </pre>
+     */
+    @Property
+    void rightUnitLaw(
+            @ForAll @IntRange(min = 5, max = 200) int width,
+            @ForAll("docs") Doc doc) {
+        String appended = empty().append(doc).render(width);
+        String original = doc.render(width);
+        assertThat(appended, is(equalTo(original)));
+    }
+
+    /**
+     * This property observes the associativity law mentioned
+     * in the original paper:
+     *
+     * <pre>
+     * x <> (y <> z) = (x <> y) <> z
+     * </pre>
+     */
+    @Property
+    void associativityLaw(
+            @ForAll @IntRange(min = 5, max = 200) int width,
+            @ForAll("docs") Doc x,
+            @ForAll("docs") Doc y,
+            @ForAll("docs") Doc z) {
+        String leftAssociated = x.append(y).append(z).render(width);
+        String rightAssociated = x.append(y.append(z)).render(width);
+        assertThat(leftAssociated, is(equalTo(rightAssociated)));
     }
 
     /**
@@ -99,7 +280,7 @@ public class DocTest {
             @ForAll @IntRange(min = 0, max = 200) int j,
             @ForAll("docs") Doc doc) {
         String sumIndent = doc.indent(i + j).render(width);
-        String nestedIndent = doc.indent(i).indent(j).render(width);
+        String nestedIndent = doc.indent(j).indent(i).render(width);
         assertThat(sumIndent, is(equalTo(nestedIndent)));
     }
 
@@ -170,6 +351,44 @@ public class DocTest {
         assertThat(topLevelIndent, is(equalTo(noIndent)));
     }
 
+    @Test
+    void testEquals() {
+        Doc left = docs().sample();
+
+        Doc right = docs().sampleStream()
+                .filter(r -> !left.equals(r))
+                .findFirst().get();
+
+        // EqualsVerifier doesn't work with singletons,
+        // so we can't test Line, LineOrSpace, LineOrEmpty or Empty:
+        // it requires prefab values for recursive data types and
+        // those prefab values must not be equal to each other
+        EqualsVerifier
+                .forClasses(
+                        Text.class, Append.class,
+                        Alternatives.class, Indent.class,
+                        LineOr.class)
+                .usingGetClass()
+                .withPrefabValues(Doc.class, left, right)
+                .verify();
+    }
+
+    @Test
+    void testToString() {
+        ToStringVerifier
+                .forClasses(
+                        Text.class, Append.class,
+                        Alternatives.class, Indent.class,
+                        LineOr.class, Empty.class)
+                .withPrefabValue(Doc.class, docs().sample())
+                .verify();
+
+        ToStringVerifier
+                .forClasses(Line.class, LineOrSpace.class, LineOrEmpty.class)
+                .withIgnoredFields("altDoc")
+                .verify();
+    }
+
     @Provide
     Arbitrary<Doc> docs() {
         return Arbitraries.lazyOf(
@@ -177,8 +396,13 @@ public class DocTest {
                 () -> Arbitraries.strings().ofMaxLength(100).map(Doc::text),
                 // Line
                 () -> Arbitraries.just(Doc.line()),
+                // LineOrSpace
+                () -> Arbitraries.just(Doc.lineOrSpace()),
+                // LineOrEmpty
+                () -> Arbitraries.just(Doc.lineOrEmpty()),
                 // LineOr
-                () -> Arbitraries.chars().map(ch -> String.valueOf(ch)).map(Doc::lineOr),
+                () -> docs().map(Doc::lineOr),
+                () -> Arbitraries.strings().ofMaxLength(10).map(Doc::lineOr),
                 // Empty
                 () -> Arbitraries.just(Doc.empty()),
                 // Append

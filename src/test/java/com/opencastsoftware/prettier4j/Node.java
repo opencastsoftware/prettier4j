@@ -21,7 +21,7 @@ public class Node {
                                                         .map(Node::show)
                                                         .reduce(Doc.empty(), (left, right) -> {
                                                             return left instanceof Doc.Empty ? right
-                                                                    : left.append(Doc.text(",")).appendLine(right);
+                                                                    : left.append(Doc.text(",")).appendLineOrSpace(right);
                                                         }).indent(1))
                                         .append(Doc.text("]"))
                                         .indent(data.length())));
@@ -35,7 +35,7 @@ public class Node {
                                         .map(Node::showPrime)
                                         .reduce(Doc.empty(), (left, right) -> {
                                             return left instanceof Doc.Empty ? right
-                                                    : left.append(Doc.text(",")).appendLine(right);
+                                                    : left.append(Doc.text(",")).appendLineOrSpace(right);
                                         })
                                         .bracket(2, "[", "]"));
     }
