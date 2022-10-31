@@ -5,6 +5,33 @@ import java.util.ArrayDeque;
 import java.util.Deque;
 import java.util.Map;
 
+/**
+ * Implements the algorithm described in Philip Wadler's "A prettier printer", a
+ * pretty printing algorithm for laying out hierarchical documents as text.
+ * <p>
+ * To construct a document, see the static methods of
+ * {@link com.opencastsoftware.prettier4j.Doc Doc}, especially
+ * {@link com.opencastsoftware.prettier4j.Doc#text(String) text},
+ * {@link com.opencastsoftware.prettier4j.Doc#empty() empty},
+ * {@link com.opencastsoftware.prettier4j.Doc#line() line} and its related
+ * methods.
+ * <p>
+ * To concatenate documents, see
+ * {@link com.opencastsoftware.prettier4j.Doc#append(Doc) append} and its
+ * related instance methods.
+ * <p>
+ * To declare groups of content which should be collapsed onto one line if
+ * possible, see the static method
+ * {@link com.opencastsoftware.prettier4j.Doc#group(Doc) group}.
+ * <p>
+ * To render documents to String, see the instance method
+ * {@link com.opencastsoftware.prettier4j.Doc#render(int) render} or static
+ * method {@link com.opencastsoftware.prettier4j.Doc#render(int, Doc) render}.
+ *
+ * @see <a href=
+ *      "https://homepages.inf.ed.ac.uk/wadler/papers/prettier/prettier.pdf">A
+ *      prettier printer</a>
+ */
 public abstract class Doc {
     /**
      * Returns a flattened layout for the current
@@ -482,7 +509,7 @@ public abstract class Doc {
             this.altDoc = this;
         }
 
-        LineOr(Doc altDoc) {
+        protected LineOr(Doc altDoc) {
             this.altDoc = altDoc;
         }
 
@@ -597,6 +624,9 @@ public abstract class Doc {
     }
 
     /**
+     * Creates a {@link com.opencastsoftware.prettier4j.Doc Doc} representing a
+     * line break which cannot be flattened.
+     *
      * @return a {@link com.opencastsoftware.prettier4j.Doc Doc} representing a line
      *         break which cannot be flattened.
      */
@@ -605,6 +635,9 @@ public abstract class Doc {
     };
 
     /**
+     * Creates a {@link com.opencastsoftware.prettier4j.Doc Doc} representing a
+     * line break which may be flattened into an empty document.
+     *
      * @return a {@link com.opencastsoftware.prettier4j.Doc Doc} representing a line
      *         break which may be flattened into an empty document.
      */
@@ -613,6 +646,9 @@ public abstract class Doc {
     };
 
     /**
+     * Creates a {@link com.opencastsoftware.prettier4j.Doc Doc} representing a
+     * line break which may be flattened into a single space character.
+     *
      * @return a {@link com.opencastsoftware.prettier4j.Doc Doc} representing a line
      *         break which may be flattened into a single space character.
      */
@@ -621,6 +657,8 @@ public abstract class Doc {
     };
 
     /**
+     * Creates an empty {@link com.opencastsoftware.prettier4j.Doc Doc}.
+     *
      * @return an empty {@link com.opencastsoftware.prettier4j.Doc Doc}.
      */
     public static Doc empty() {
@@ -628,6 +666,10 @@ public abstract class Doc {
     }
 
     /**
+     * Creates a {@link com.opencastsoftware.prettier4j.Doc Doc} representing a line
+     * break which may be flattened into an alternative document {@code altDoc}.
+     *
+     * @param altDoc the alternative document to use if the line break is flattened.
      * @return a {@link com.opencastsoftware.prettier4j.Doc Doc} representing a line
      *         break which may be flattened into an alternative document
      *         {@code altDoc}.
@@ -637,6 +679,10 @@ public abstract class Doc {
     }
 
     /**
+     * Creates a {@link com.opencastsoftware.prettier4j.Doc Doc} representing a line
+     * break which may be flattened into the alternative text {@code altText}.
+     *
+     * @param altText the alternative text to use if the line break is flattened.
      * @return a {@link com.opencastsoftware.prettier4j.Doc Doc} representing a line
      *         break which may be flattened into the alternative text
      *         {@code altText}.
@@ -646,7 +692,11 @@ public abstract class Doc {
     }
 
     /**
-     * Declare a {@link com.opencastsoftware.prettier4j.Doc Doc} which represents a
+     * Creates a {@link com.opencastsoftware.prettier4j.Doc Doc} which represents a
+     * group that can be flattened into a more compact layout.
+     *
+     * @param doc the document which is declared as a group which may be flattened.
+     * @return a {@link com.opencastsoftware.prettier4j.Doc Doc} which represents a
      * group that can be flattened into a more compact layout.
      */
     public static Doc group(Doc doc) {
@@ -707,8 +757,7 @@ public abstract class Doc {
      * Traverse the input {@code doc} recursively, eliminating all nodes except for
      * {@link com.opencastsoftware.prettier4j.Doc.Text Text} and subtypes of
      * {@link com.opencastsoftware.prettier4j.Doc.LineOr LineOr}, and producing a
-     * queue of entries
-     * to be rendered.
+     * queue of entries to be rendered.
      *
      * @param width    the preferred maximum width for rendering.
      * @param indent   the current indentation level.

@@ -39,6 +39,9 @@ jobs:
         with:
           arguments: build --info
 
+      - name: Upload Coverage Report
+        uses: codecov/codecov-action@v3
+
       - name: Publish Test Results
         uses: actions/upload-artifact@v2
         if: always()
