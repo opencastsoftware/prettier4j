@@ -2,9 +2,9 @@
 
 [![CI](https://github.com/opencastsoftware/prettier4j/actions/workflows/ci.yml/badge.svg)](https://github.com/opencastsoftware/prettier4j/actions/workflows/ci.yml)
 [![codecov](https://codecov.io/gh/opencastsoftware/prettier4j/branch/main/graph/badge.svg?token=JHVF151VM1)](https://codecov.io/gh/opencastsoftware/prettier4j)
-![Maven Central](https://img.shields.io/maven-central/v/com.opencastsoftware/prettier4j)
- [![javadoc](https://javadoc.io/badge2/com.opencastsoftware/prettier4j/javadoc.svg)](https://javadoc.io/doc/com.opencastsoftware/prettier4j)
-![License](https://img.shields.io/github/license/opencastsoftware/prettier4j?color=blue)
+[![Maven Central](https://img.shields.io/maven-central/v/com.opencastsoftware/prettier4j)](https://search.maven.org/search?q=g%3Acom.opencastsoftware+AND+a%3Aprettier4j)
+[![javadoc](https://javadoc.io/badge2/com.opencastsoftware/prettier4j/javadoc.svg)](https://javadoc.io/doc/com.opencastsoftware/prettier4j)
+[![License](https://img.shields.io/github/license/opencastsoftware/prettier4j?color=blue)](https://spdx.org/licenses/Apache-2.0.html)
 
 A Java implementation of Philip Wadler's ["A prettier printer"](https://homepages.inf.ed.ac.uk/wadler/papers/prettier/prettier.pdf), a pretty-printing algorithm for laying out hierarchical documents as text.
 
