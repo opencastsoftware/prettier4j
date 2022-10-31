@@ -41,6 +41,8 @@ jobs:
 
       - name: Upload Coverage Report
         uses: codecov/codecov-action@v3
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
 
       - name: Publish Test Results
         uses: actions/upload-artifact@v2
