@@ -20,7 +20,7 @@ version = "0.0.0-SNAPSHOT"
 gitVersioning.apply {
     refs {
         branch(".+") {
-            describeTagPattern = "v(?<version>.*)"
+            describeTagPattern = "v(?<version>.*)".toPattern()
             version = "\${describe.tag.version:-0.0.0}-\${describe.distance}-\${commit.short}-SNAPSHOT"
         }
         tag("v(?<version>.*)") {
@@ -28,7 +28,7 @@ gitVersioning.apply {
         }
     }
     rev {
-        describeTagPattern = "v(?<version>.*)"
+        describeTagPattern = "v(?<version>.*)".toPattern()
         version = "\${describe.tag.version:-0.0.0}-\${describe.distance}-\${commit.short}-SNAPSHOT"
     }
 }
