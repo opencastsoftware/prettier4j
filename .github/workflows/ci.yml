@@ -39,6 +39,13 @@ jobs:
         with:
           arguments: build --info
 
+      - name: Publish Test Results
+        uses: actions/upload-artifact@v2
+        if: always()
+        with:
+          name: test-results
+          path: '**/build/test-results/test/TEST-*.xml'
+
       - name: Publish To Sonatype
         if: github.event_name != 'pull_request' && (startsWith(github.ref, 'refs/tags/v') || github.ref == 'refs/heads/main')
         uses: gradle/gradle-build-action@v2.1.5
