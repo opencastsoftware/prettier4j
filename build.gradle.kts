@@ -52,6 +52,8 @@ java {
 publishing {
     publications {
         create<MavenPublication>("libMaven") {
+            from(components["java"])
+
             pom {
                 name.set("prettier4j")
                 description.set(project.description)
