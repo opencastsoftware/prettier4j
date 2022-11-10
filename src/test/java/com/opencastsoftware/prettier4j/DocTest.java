@@ -161,12 +161,12 @@ public class DocTest {
     @Test
     void testBracket() {
         String expected = "functionCall(a, b, c)";
-        String actual = group(text("functionCall")
-                .appendLineOrEmpty(
+        String actual = text("functionCall")
+                .append(
                         Doc.intersperse(
                                 Doc.text(",").append(Doc.lineOrSpace()),
                                 Arrays.asList("a", "b", "c").stream().map(Doc::text))
-                                .bracket(2, Doc.lineOrEmpty(), Doc.text("("), Doc.text(")"))))
+                                .bracket(2, Doc.lineOrEmpty(), Doc.text("("), Doc.text(")")))
                 .render(80);
 
         assertThat(actual, is(equalTo(expected)));
@@ -175,12 +175,12 @@ public class DocTest {
     @Test
     void testBracketStringOverload() {
         String expected = "functionCall(a, b, c)";
-        String actual = group(text("functionCall")
-                .appendLineOrEmpty(
+        String actual = text("functionCall")
+                .append(
                         Doc.intersperse(
                                 Doc.text(",").append(Doc.lineOrSpace()),
                                 Arrays.asList("a", "b", "c").stream().map(Doc::text))
-                                .bracket(2, Doc.lineOrEmpty(), "(", ")")))
+                                .bracket(2, Doc.lineOrEmpty(), "(", ")"))
                 .render(80);
 
         assertThat(actual, is(equalTo(expected)));
