@@ -14,7 +14,7 @@ This algorithm is particularly suitable for formatting source code (see for exam
 
 Gradle (build.gradle / build.gradle.kts):
 ```groovy
-implementation("com.opencastsoftware:prettier4j:0.1.0")
+implementation("com.opencastsoftware:prettier4j:0.1.1")
 ```
 
 Maven (pom.xml):
@@ -22,7 +22,7 @@ Maven (pom.xml):
 <dependency>
     <groupId>com.opencastsoftware</groupId>
     <artifactId>prettier4j</artifactId>
-    <version>0.1.0</version>
+    <version>0.1.1</version>
 </dependency>
 ```
 
