@@ -2,8 +2,11 @@ package com.opencastsoftware.prettier4j;
 
 import java.util.AbstractMap.SimpleEntry;
 import java.util.ArrayDeque;
+import java.util.Collection;
 import java.util.Deque;
 import java.util.Map;
+import java.util.function.BinaryOperator;
+import java.util.stream.Stream;
 
 /**
  * Implements the algorithm described in Philip Wadler's "A prettier printer", a
@@ -151,6 +154,8 @@ public abstract class Doc {
      * Bracket the current document by the {@code left} and {@code right} Strings,
      * indented by {@code indent} spaces.
      *
+     * When collapsed, line separators are replaced by spaces.
+     *
      * @param indent the number of spaces of indent to apply.
      * @param left   the left-hand bracket String.
      * @param right  the right-hand bracket String.
@@ -164,16 +169,50 @@ public abstract class Doc {
      * Bracket the current document by the {@code left} and {@code right} documents,
      * indented by {@code indent} spaces.
      *
+     * When collapsed, line separators are replaced by spaces.
+     *
      * @param indent the number of spaces of indent to apply.
      * @param left   the left-hand bracket document.
      * @param right  the right-hand bracket document.
      * @return the bracketed document.
      */
     public Doc bracket(int indent, Doc left, Doc right) {
+        return bracket(indent, Doc.lineOrSpace(), left, right);
+    }
+
+    /**
+     * Bracket the current document by the {@code left} and {@code right} Strings,
+     * indented by {@code indent} spaces.
+     *
+     * When collapsed, line separators are replaced by the {@code lineDoc}.
+     *
+     * @param indent  the number of spaces of indent to apply.
+     * @param lineDoc the line separator document.
+     * @param left    the left-hand bracket document.
+     * @param right   the right-hand bracket document.
+     * @return the bracketed document.
+     */
+    public Doc bracket(int indent, Doc lineDoc, String left, String right) {
+        return bracket(indent, lineDoc, Doc.text(left), Doc.text(right));
+    }
+
+    /**
+     * Bracket the current document by the {@code left} and {@code right} documents,
+     * indented by {@code indent} spaces.
+     *
+     * When collapsed, line separators are replaced by the {@code lineDoc}.
+     *
+     * @param indent  the number of spaces of indent to apply.
+     * @param lineDoc the line separator document.
+     * @param left    the left-hand bracket document.
+     * @param right   the right-hand bracket document.
+     * @return the bracketed document.
+     */
+    public Doc bracket(int indent, Doc lineDoc, Doc left, Doc right) {
         return group(
                 left
-                        .append(lineOrSpace().append(this).indent(indent))
-                        .appendLineOrSpace(right));
+                        .append(lineDoc.append(this).indent(indent))
+                        .append(lineDoc.append(right)));
     }
 
     /**
@@ -692,12 +731,66 @@ public abstract class Doc {
     }
 
     /**
+     * Reduce a collection of documents using the binary operator {@code fn},
+     * returning an empty document if the collection is empty.
+     *
+     * @param documents the collection of documents.
+     * @param fn        the binary operator for combining documents.
+     * @return a document built by reducing the {@code documents} using the operator
+     *         {@code fn}.
+     */
+    public static Doc fold(Collection<Doc> documents, BinaryOperator<Doc> fn) {
+        return fold(documents.stream(), fn);
+    }
+
+    /**
+     * Reduce a stream of documents using the binary operator {@code fn}, returning
+     * an empty document if the stream is empty.
+     *
+     * @param documents the stream of documents.
+     * @param fn        the binary operator for combining documents.
+     * @return a document built by reducing the {@code documents} using the operator
+     *         {@code fn}.
+     */
+    public static Doc fold(Stream<Doc> documents, BinaryOperator<Doc> fn) {
+        return documents.reduce(fn).orElse(Doc.empty());
+    }
+
+    /**
+     * Intersperse a {@code separator} document in between the elements of a
+     * collection of documents.
+     *
+     * @param separator the separator document.
+     * @param documents the collection of documents.
+     * @return a document containing the concatenation of {@code documents}
+     *         separated by the {@code separator}.
+     */
+    public static Doc intersperse(Doc separator, Collection<Doc> documents) {
+        return intersperse(separator, documents.stream());
+    }
+
+    /**
+     * Intersperse a {@code separator} document in between the elements of a stream
+     * of documents.
+     *
+     * @param separator the separator document.
+     * @param documents the stream of documents.
+     * @return a document containing the concatenation of {@code documents}
+     *         separated by the {@code separator}.
+     */
+    public static Doc intersperse(Doc separator, Stream<Doc> documents) {
+        return Doc.fold(documents, (left, right) -> {
+            return left.append(separator).append(right);
+        });
+    }
+
+    /**
      * Creates a {@link com.opencastsoftware.prettier4j.Doc Doc} which represents a
      * group that can be flattened into a more compact layout.
      *
      * @param doc the document which is declared as a group which may be flattened.
      * @return a {@link com.opencastsoftware.prettier4j.Doc Doc} which represents a
-     * group that can be flattened into a more compact layout.
+     *         group that can be flattened into a more compact layout.
      */
     public static Doc group(Doc doc) {
         return alternatives(doc.flatten(), doc);

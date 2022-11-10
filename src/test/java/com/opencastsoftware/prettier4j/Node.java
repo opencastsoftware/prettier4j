@@ -17,12 +17,9 @@ public class Node {
                         subTrees.isEmpty() ? Doc.empty()
                                 : Doc.text("[")
                                         .append(
-                                                subTrees.stream()
-                                                        .map(Node::show)
-                                                        .reduce(Doc.empty(), (left, right) -> {
-                                                            return left instanceof Doc.Empty ? right
-                                                                    : left.append(Doc.text(",")).appendLineOrSpace(right);
-                                                        }).indent(1))
+                                                Doc.intersperse(
+                                                        Doc.text(",").append(Doc.lineOrSpace()),
+                                                        subTrees.stream().map(Node::show)).indent(1))
                                         .append(Doc.text("]"))
                                         .indent(data.length())));
     }
@@ -31,12 +28,9 @@ public class Node {
         return Doc.text(data)
                 .append(
                         subTrees.isEmpty() ? Doc.empty()
-                                : subTrees.stream()
-                                        .map(Node::showPrime)
-                                        .reduce(Doc.empty(), (left, right) -> {
-                                            return left instanceof Doc.Empty ? right
-                                                    : left.append(Doc.text(",")).appendLineOrSpace(right);
-                                        })
+                                : Doc.intersperse(
+                                        Doc.text(",").append(Doc.lineOrSpace()),
+                                        subTrees.stream().map(Node::showPrime))
                                         .bracket(2, "[", "]"));
     }
 }

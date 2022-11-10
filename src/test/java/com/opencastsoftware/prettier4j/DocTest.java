@@ -158,6 +158,93 @@ public class DocTest {
         assertThat(actual, is(equalTo(expected)));
     }
 
+    @Test
+    void testBracket() {
+        String expected = "functionCall(a, b, c)";
+        String actual = group(text("functionCall")
+                .appendLineOrEmpty(
+                        Doc.intersperse(
+                                Doc.text(",").append(Doc.lineOrSpace()),
+                                Arrays.asList("a", "b", "c").stream().map(Doc::text))
+                                .bracket(2, Doc.lineOrEmpty(), Doc.text("("), Doc.text(")"))))
+                .render(80);
+
+        assertThat(actual, is(equalTo(expected)));
+    }
+
+    @Test
+    void testBracketStringOverload() {
+        String expected = "functionCall(a, b, c)";
+        String actual = group(text("functionCall")
+                .appendLineOrEmpty(
+                        Doc.intersperse(
+                                Doc.text(",").append(Doc.lineOrSpace()),
+                                Arrays.asList("a", "b", "c").stream().map(Doc::text))
+                                .bracket(2, Doc.lineOrEmpty(), "(", ")")))
+                .render(80);
+
+        assertThat(actual, is(equalTo(expected)));
+    }
+
+    @Test
+    void testBracketFlattening() {
+        String expected = "functionCall(\n  a,\n  b,\n  c\n)";
+        String actual = text("functionCall")
+                .append(
+                        Doc.intersperse(
+                                Doc.text(",").append(Doc.lineOrSpace()),
+                                Arrays.asList("a", "b", "c").stream().map(Doc::text))
+                                .bracket(2, Doc.lineOrEmpty(), Doc.text("("), Doc.text(")")))
+                .render(10);
+
+        assertThat(actual, is(equalTo(expected)));
+    }
+
+    @Test
+    void testIntersperse() {
+        String expected = "a, b, c";
+        String actual = Doc.intersperse(
+                Doc.text(", "),
+                Arrays.asList(Doc.text("a"), Doc.text("b"), Doc.text("c"))).render(80);
+        assertThat(actual, is(equalTo(expected)));
+    }
+
+    /**
+     * This tests the {@code spread} operator of the original paper, implemented via
+     * the Haskell functions:
+     *
+     * <pre>{@code
+     * x <+> y = x <> text " " <> y
+     * spread = folddoc (<+>)
+     * }</pre>
+     */
+    @Test
+    void testSpreadOperator() {
+        String expected = "a b c";
+        String actual = Doc.fold(
+                Arrays.asList(Doc.text("a"), Doc.text("b"), Doc.text("c")),
+                (l, r) -> l.appendSpace(r)).render(80);
+        assertThat(actual, is(equalTo(expected)));
+    }
+
+    /**
+     * This tests the {@code stack} operator of the original paper, implemented via
+     * the Haskell functions:
+     *
+     * <pre>{@code
+     * x </> y = x <> line <> y
+     * stack = folddoc (</>)
+     * }</pre>
+     */
+    @Test
+    void testStackOperator() {
+        String expected = "a\nb\nc";
+        String actual = Doc.fold(
+                Arrays.asList(Doc.text("a"), Doc.text("b"), Doc.text("c")),
+                (l, r) -> l.appendLine(r)).render(80);
+        assertThat(actual, is(equalTo(expected)));
+    }
+
     /**
      * This property represents the observation that an atomic token must render
      * as nothing more than its text content.
@@ -407,6 +494,10 @@ public class DocTest {
                 () -> Arbitraries.just(Doc.empty()),
                 // Append
                 () -> docs().tuple2().map(tuple -> tuple.get1().append(tuple.get2())),
+                // Indent
+                () -> docs().map(doc -> doc.indent(2)),
+                // Bracketing
+                () -> docs().map(doc -> doc.bracket(2, Doc.lineOrEmpty(), Doc.text("["), Doc.text("]"))),
                 // Alternatives
                 () -> docs().map(Doc::group));
     }
