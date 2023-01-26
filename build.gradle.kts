@@ -37,7 +37,7 @@ extra["isReleaseVersion"] = !version.toString().endsWith("SNAPSHOT")
 
 dependencies {
     testImplementation("org.junit.jupiter:junit-jupiter:5.9.1")
-    testImplementation("net.jqwik:jqwik:1.7.0")
+    testImplementation("net.jqwik:jqwik:1.7.2")
     testImplementation("org.hamcrest:hamcrest:2.2")
     testImplementation("nl.jqno.equalsverifier:equalsverifier:3.10.1")
     testImplementation("com.jparams:to-string-verifier:1.4.8")
