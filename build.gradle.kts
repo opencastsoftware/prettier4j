@@ -36,7 +36,7 @@ gitVersioning.apply {
 extra["isReleaseVersion"] = !version.toString().endsWith("SNAPSHOT")
 
 dependencies {
-    testImplementation("org.junit.jupiter:junit-jupiter:5.9.1")
+    testImplementation("org.junit.jupiter:junit-jupiter:5.9.2")
     testImplementation("net.jqwik:jqwik:1.7.2")
     testImplementation("org.hamcrest:hamcrest:2.2")
     testImplementation("nl.jqno.equalsverifier:equalsverifier:3.10.1")
