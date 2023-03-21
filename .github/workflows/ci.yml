@@ -5,8 +5,8 @@ on:
   pull_request:
 
 env:
-  ORG_GRADLE_PROJECT_sonatypeUsername: ${{ secrets.SONATYPE_USERNAME }}
-  ORG_GRADLE_PROJECT_sonatypePassword: ${{ secrets.SONATYPE_PASSWORD }}
+  ORG_GRADLE_PROJECT_mavenCentralUsername: ${{ secrets.SONATYPE_USERNAME }}
+  ORG_GRADLE_PROJECT_mavenCentralPassword: ${{ secrets.SONATYPE_PASSWORD }}
   ORG_GRADLE_PROJECT_signingKey: ${{ secrets.PGP_SECRET }}
   ORG_GRADLE_PROJECT_signingPassword: ${{ secrets.PGP_PASSPHRASE }}
 
@@ -25,13 +25,13 @@ jobs:
         id: download-java
         with:
           distribution: temurin
-          java-version: 8
+          java-version: 11
 
       - name: Setup Java JDK
         uses: actions/setup-java@v3.10.0
         with:
           distribution: jdkfile
-          java-version: 8
+          java-version: 11
           jdkFile: ${{ steps.download-java.outputs.jdkFile }}
 
       - name: Build & Test
@@ -49,10 +49,10 @@ jobs:
         if: always()
         with:
           name: test-results
-          path: '**/build/test-results/test/TEST-*.xml'
+          path: '**/build/test-results/*/TEST-*.xml'
 
       - name: Publish To Sonatype
         if: github.event_name != 'pull_request' && (startsWith(github.ref, 'refs/tags/v') || github.ref == 'refs/heads/main')
         uses: gradle/gradle-build-action@v2.4.0
         with:
-          arguments: publishToSonatype closeAndReleaseSonatypeStagingRepository
+          arguments: publishAllPublicationsToMavenCentral

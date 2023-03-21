@@ -1,117 +1,72 @@
 plugins {
     `java-library`
-    `maven-publish`
-    `signing`
-    jacoco
-    id("com.github.ben-manes.versions") version "0.46.0"
-    id("io.github.gradle-nexus.publish-plugin") version "1.2.0"
-    id("me.qoomon.git-versioning") version "5.2.0"
+    alias(libs.plugins.gradleJavaConventions)
 }
 
-repositories {
-    mavenCentral()
-}
+repositories { mavenCentral() }
 
 group = "com.opencastsoftware"
+
 description = "A Prettier Printer for Java"
 
-version = "0.0.0-SNAPSHOT"
-
-gitVersioning.apply {
-    refs {
-        branch(".+") {
-            describeTagPattern = "v(?<version>.*)".toPattern()
-            version = "\${describe.tag.version:-0.0.0}-\${describe.distance}-\${commit.short}-SNAPSHOT"
-        }
-        tag("v(?<version>.*)") {
-            version = "\${ref.version}"
-        }
-    }
-    rev {
-        describeTagPattern = "v(?<version>.*)".toPattern()
-        version = "\${describe.tag.version:-0.0.0}-\${describe.distance}-\${commit.short}-SNAPSHOT"
-    }
-}
-
-extra["isReleaseVersion"] = !version.toString().endsWith("SNAPSHOT")
+java { toolchain.languageVersion.set(JavaLanguageVersion.of(11)) }
 
 dependencies {
-    testImplementation("org.junit.jupiter:junit-jupiter:5.9.2")
-    testImplementation("net.jqwik:jqwik:1.7.2")
-    testImplementation("org.hamcrest:hamcrest:2.2")
-    testImplementation("nl.jqno.equalsverifier:equalsverifier:3.14.1")
-    testImplementation("com.jparams:to-string-verifier:1.4.8")
+    testImplementation(libs.junitJupiter)
+    testImplementation(libs.jqwik)
+    testImplementation(libs.hamcrest)
+    testImplementation(libs.equalsVerifier)
+    testImplementation(libs.toStringVerifier)
 }
 
-java {
-    withJavadocJar()
-    withSourcesJar()
-    toolchain.languageVersion.set(JavaLanguageVersion.of(8))
-}
+mavenPublishing {
+    coordinates("com.opencastsoftware", "prettier4j", project.version.toString())
 
-publishing {
-    publications {
-        create<MavenPublication>("libMaven") {
-            from(components["java"])
-
-            pom {
-                name.set("prettier4j")
-                description.set(project.description)
-                url.set("https://github.com/opencastsoftware/prettier4j")
-                licenses {
-                    license {
-                        name.set("The Apache License, Version 2.0")
-                        url.set("http://www.apache.org/licenses/LICENSE-2.0.txt")
-                    }
-                }
-                developers {
-                    developer {
-                        id.set("DavidGregory084")
-                        name.set("David Gregory")
-                        email.set("david.gregory@opencastsoftware.com")
-                    }
-                }
-                scm {
-                    connection.set("scm:git:https://github.com/opencastsoftware/prettier4j.git")
-                    developerConnection.set("scm:git:git@github.com:opencastsoftware/prettier4j.git")
-                    url.set("https://github.com/opencastsoftware/prettier4j")
-                }
+    pom {
+        name.set("prettier4j")
+        description.set(project.description)
+        url.set("https://github.com/opencastsoftware/prettier4j")
+        inceptionYear.set("2022")
+        licenses {
+            license {
+                name.set("The Apache License, Version 2.0")
+                url.set("http://www.apache.org/licenses/LICENSE-2.0.txt")
+                distribution.set("repo")
             }
         }
-    }
-}
-
-signing {
-    setRequired({ project.extra["isReleaseVersion"] as Boolean })
-    val signingKey: String? by project
-    val signingPassword: String? by project
-    useInMemoryPgpKeys(signingKey, signingPassword)
-    sign(publishing.publications["libMaven"])
-}
-
-nexusPublishing {
-    repositories {
-        sonatype {
-            nexusUrl.set(uri("https://s01.oss.sonatype.org/service/local/"))
-            snapshotRepositoryUrl.set(uri("https://s01.oss.sonatype.org/content/repositories/snapshots/"))
+        organization {
+            name.set("Opencast Software Europe Ltd")
+            url.set("https://opencastsoftware.com")
+        }
+        developers {
+            developer {
+                id.set("DavidGregory084")
+                name.set("David Gregory")
+                organization.set("Opencast Software Europe Ltd")
+                organizationUrl.set("https://opencastsoftware.com/")
+                timezone.set("Europe/London")
+                url.set("https://github.com/DavidGregory084")
+            }
+        }
+        ciManagement {
+            system.set("Github Actions")
+            url.set("https://github.com/opencastsoftware/prettier4j/actions")
+        }
+        issueManagement {
+            system.set("GitHub")
+            url.set("https://github.com/opencastsoftware/prettier4j/issues")
+        }
+        scm {
+            connection.set("scm:git:https://github.com/opencastsoftware/prettier4j.git")
+            developerConnection.set("scm:git:git@github.com:opencastsoftware/prettier4j.git")
+            url.set("https://github.com/opencastsoftware/prettier4j")
         }
     }
-}
-
-tasks.named<Test>("test") {
-    useJUnitPlatform()
 }
 
 tasks.withType<JavaCompile> {
-    options.encoding = "UTF-8"
+    // Target Java 8
+    options.release.set(8)
 }
 
-tasks.test {
-    finalizedBy(tasks.jacocoTestReport)
-}
-
-tasks.jacocoTestReport {
-    reports {
-        xml.required.set(true)
-    }
-}
+tasks.named<Test>("test") { useJUnitPlatform { includeEngines("junit-jupiter", "jqwik") } }
