@@ -1,20 +1,22 @@
+/*
+ * SPDX-FileCopyrightText:  Copyright 2022-2023 Opencast Software Europe Ltd
+ * SPDX-License-Identifier: Apache-2.0
+ */
 package com.opencastsoftware.prettier4j;
+
+import com.jparams.verifier.tostring.ToStringVerifier;
+import net.jqwik.api.*;
+import net.jqwik.api.constraints.IntRange;
+import nl.jqno.equalsverifier.EqualsVerifier;
+import org.junit.jupiter.api.Test;
+
+import java.util.Arrays;
+import java.util.Collections;
 
 import static com.opencastsoftware.prettier4j.Doc.*;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.is;
-
-import java.util.Arrays;
-import java.util.Collections;
-
-import org.junit.jupiter.api.Test;
-
-import com.jparams.verifier.tostring.ToStringVerifier;
-
-import net.jqwik.api.*;
-import net.jqwik.api.constraints.IntRange;
-import nl.jqno.equalsverifier.EqualsVerifier;
 
 public class DocTest {
     /** The example tree data structure from the original paper */
