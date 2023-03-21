@@ -12,9 +12,11 @@ This algorithm is particularly suitable for formatting source code (see for exam
 
 ## Installation
 
+*prettier4j* is published for Java 8 and above.
+
 Gradle (build.gradle / build.gradle.kts):
 ```groovy
-implementation("com.opencastsoftware:prettier4j:0.1.1")
+implementation("com.opencastsoftware:prettier4j:0.2.0")
 ```
 
 Maven (pom.xml):
@@ -22,7 +24,7 @@ Maven (pom.xml):
 <dependency>
     <groupId>com.opencastsoftware</groupId>
     <artifactId>prettier4j</artifactId>
-    <version>0.1.1</version>
+    <version>0.2.0</version>
 </dependency>
 ```
 
