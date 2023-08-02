@@ -1,5 +1,5 @@
 [versions]
-equalsVerifier = "3.15"
+equalsVerifier = "3.15.1"
 gradleJavaConventions = "0.1.4"
 hamcrest = "2.2"
 jacoco = "0.8.8"
