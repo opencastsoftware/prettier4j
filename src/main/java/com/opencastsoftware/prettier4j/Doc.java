@@ -1,15 +1,20 @@
 /*
- * SPDX-FileCopyrightText:  Copyright 2022-2023 Opencast Software Europe Ltd
+ * SPDX-FileCopyrightText:  © 2022-2024 Opencast Software Europe Ltd <https://opencastsoftware.com>
  * SPDX-License-Identifier: Apache-2.0
  */
 package com.opencastsoftware.prettier4j;
 
+import com.opencastsoftware.prettier4j.ansi.Attrs;
+
+import java.io.IOException;
+import java.io.UncheckedIOException;
 import java.util.AbstractMap.SimpleEntry;
 import java.util.ArrayDeque;
 import java.util.Collection;
 import java.util.Deque;
 import java.util.Map;
 import java.util.function.BinaryOperator;
+import java.util.function.UnaryOperator;
 import java.util.stream.Stream;
 
 /**
@@ -217,6 +222,11 @@ public abstract class Doc {
                 left
                         .append(lineDoc.append(this).indent(indent))
                         .append(lineDoc.append(right)));
+    }
+
+    @SafeVarargs
+    public final Doc styled(UnaryOperator<Attrs.Builder> ...styles) {
+        return styled(this, styles);
     }
 
     /**
@@ -486,7 +496,7 @@ public abstract class Doc {
      * Represents a line break which cannot be flattened into a more compact layout.
      */
     public static class Line extends LineOr {
-        private static Line INSTANCE = new Line();
+        private static final Line INSTANCE = new Line();
 
         static Line getInstance() {
             return INSTANCE;
@@ -505,7 +515,7 @@ public abstract class Doc {
 
     /** Represents a line break which can be flattened into an empty document. */
     public static class LineOrEmpty extends LineOr {
-        private static LineOrEmpty INSTANCE = new LineOrEmpty();
+        private static final LineOrEmpty INSTANCE = new LineOrEmpty();
 
         static LineOrEmpty getInstance() {
             return INSTANCE;
@@ -525,7 +535,7 @@ public abstract class Doc {
      * Represents a line break which can be flattened into a single space character.
      */
     public static class LineOrSpace extends LineOr {
-        private static LineOrSpace INSTANCE = new LineOrSpace();
+        private static final LineOrSpace INSTANCE = new LineOrSpace();
 
         static LineOrSpace getInstance() {
             return INSTANCE;
@@ -610,7 +620,7 @@ public abstract class Doc {
      * Represents an empty {@link com.opencastsoftware.prettier4j.Doc Doc}.
      */
     public static class Empty extends Doc {
-        private static Empty INSTANCE = new Empty();
+        private static final Empty INSTANCE = new Empty();
 
         static Empty getInstance() {
             return INSTANCE;
@@ -627,6 +637,62 @@ public abstract class Doc {
         @Override
         public String toString() {
             return "Empty []";
+        }
+    }
+
+    public static class Styled extends Doc {
+        private final Doc doc;
+        private final Attrs attrs;
+
+        Styled(Doc doc, Attrs attrs) {
+            this.doc = doc;
+            this.attrs = attrs;
+        }
+
+        public Doc doc() {
+            return doc;
+        }
+
+        public Attrs attrs() {
+            return attrs;
+        }
+
+        @Override
+        Doc flatten() {
+            return new Styled(doc.flatten(), attrs);
+        }
+    }
+
+    public static class Escape extends Doc {
+        private final Attrs attrs;
+
+        public Escape(Attrs attrs) {
+            this.attrs = attrs;
+        }
+
+        public Attrs attrs() {
+            return this.attrs;
+        }
+
+        @Override
+        Doc flatten() {
+            return this;
+        }
+    }
+
+    public static class Reset extends Doc {
+        private static final Reset INSTANCE = new Reset();
+
+        static Reset getInstance() {
+            return INSTANCE;
+        }
+
+        Reset() {
+        }
+
+        @Override
+        Doc flatten() {
+            return this;
         }
     }
 
@@ -734,6 +800,17 @@ public abstract class Doc {
         return new LineOr(text(altText));
     }
 
+    @SafeVarargs
+    public static Doc styled(Doc doc, UnaryOperator<Attrs.Builder> ...styles) {
+        Attrs.Builder builder = new Attrs.Builder();
+
+        for (UnaryOperator<Attrs.Builder> style : styles) {
+            style.apply(builder);
+        }
+
+        return new Styled(doc, builder.build());
+    }
+
     /**
      * Reduce a collection of documents using the binary operator {@code fn},
      * returning an empty document if the collection is empty.
@@ -819,15 +896,15 @@ public abstract class Doc {
         for (Map.Entry<Integer, Doc> entry : entries) {
             Doc entryDoc = entry.getValue();
 
-            // normalization reduces Doc to Text and LineOr
+            // normalization reduces Doc to Text, LineOr, Escape and Reset
             if (entryDoc instanceof Text) {
                 Text textDoc = (Text) entryDoc;
                 remaining -= textDoc.text().length();
                 if (remaining < 0)
                     return false;
-            } else if (entryDoc instanceof LineOrSpace || entryDoc instanceof LineOr) {
+            } else if (entryDoc instanceof LineOr) {
                 return true;
-            }
+            } // No need to handle Escape or Reset here
         }
 
         return true;
@@ -870,7 +947,7 @@ public abstract class Doc {
         Deque<Map.Entry<Integer, Doc>> outQueue = new ArrayDeque<>();
 
         // Start with the outer Doc
-        inQueue.add(new SimpleEntry<Integer, Doc>(indent, doc));
+        inQueue.add(new SimpleEntry<>(indent, doc));
 
         while (!inQueue.isEmpty()) {
             Map.Entry<Integer, Doc> topEntry = inQueue.removeFirst();
@@ -882,13 +959,20 @@ public abstract class Doc {
                 // Eliminate Append
                 Append appendDoc = (Append) entryDoc;
                 // Note reverse order
-                inQueue.addFirst(new SimpleEntry<Integer, Doc>(entryIndent, appendDoc.right()));
-                inQueue.addFirst(new SimpleEntry<Integer, Doc>(entryIndent, appendDoc.left()));
+                inQueue.addFirst(new SimpleEntry<>(entryIndent, appendDoc.right()));
+                inQueue.addFirst(new SimpleEntry<>(entryIndent, appendDoc.left()));
+            } else if (entryDoc instanceof Styled) {
+                // Eliminate Styled
+                Styled styledDoc = (Styled) entryDoc;
+                // Note reverse order
+                inQueue.addFirst(new SimpleEntry<>(entryIndent, new Reset()));
+                inQueue.addFirst(new SimpleEntry<>(entryIndent, styledDoc.doc()));
+                inQueue.addFirst(new SimpleEntry<>(entryIndent, new Escape(styledDoc.attrs())));
             } else if (entryDoc instanceof Indent) {
                 // Eliminate Indent
                 Indent indentDoc = (Indent) entryDoc;
                 int newIndent = entryIndent + indentDoc.indent();
-                inQueue.addFirst(new SimpleEntry<Integer, Doc>(newIndent, indentDoc.doc()));
+                inQueue.addFirst(new SimpleEntry<>(newIndent, indentDoc.doc()));
             } else if (entryDoc instanceof Alternatives) {
                 // Eliminate Alternatives
                 Alternatives altDoc = (Alternatives) entryDoc;
@@ -906,9 +990,13 @@ public abstract class Doc {
                         // Keep track of line length
                         position += textDoc.text().length();
                         outQueue.addLast(chosenEntry);
-                    } else if (chosenDoc instanceof LineOrSpace || chosenDoc instanceof LineOr) {
+                    } else if (chosenDoc instanceof LineOr) {
                         // Reset line length
                         position = chosenIndent;
+                        outQueue.addLast(chosenEntry);
+                    } else if (chosenDoc instanceof Escape) {
+                        outQueue.addLast(chosenEntry);
+                    } else if (chosenDoc instanceof Reset) {
                         outQueue.addLast(chosenEntry);
                     }
                 }
@@ -921,6 +1009,10 @@ public abstract class Doc {
                 // Reset line length
                 position = entryIndent;
                 outQueue.addLast(topEntry);
+            } else if (entryDoc instanceof Escape) {
+                outQueue.addLast(topEntry);
+            } else if (entryDoc instanceof Reset) {
+                outQueue.addLast(topEntry);
             }
             // Eliminate Empty
         }
@@ -929,34 +1021,66 @@ public abstract class Doc {
     }
 
     /**
-     * Renders the input {@link com.opencastsoftware.prettier4j.Doc Doc} into a
-     * {@link java.lang.String String}, aiming to lay out the document with at most
+     * Renders the input {@link com.opencastsoftware.prettier4j.Doc Doc} into an
+     * {@link java.lang.Appendable Appendable}, aiming to lay out the document with at most
      * {@code width} characters on each line.
      *
-     * @param width the preferred maximum rendering width.
-     * @param doc   the document to be rendered.
-     * @return the document laid out as a {@link java.lang.String String}.
+     * @param width  the preferred maximum rendering width.
+     * @param doc    the document to be rendered.
+     * @param output the output to render into.
      */
-    public static String render(int width, Doc doc) {
-        StringBuilder output = new StringBuilder();
-
+    public static void render(int width, Doc doc, Appendable output) throws IOException {
         Deque<Map.Entry<Integer, Doc>> renderQueue = normalize(width, 0, 0, doc);
+        Deque<Attrs> attrsStack = new ArrayDeque<>();
 
         for (Map.Entry<Integer, Doc> entry : renderQueue) {
             int entryIndent = entry.getKey();
             Doc entryDoc = entry.getValue();
 
-            // normalization reduces Doc to Text and LineOr
+            // normalization reduces Doc to Text, LineOr, Escape and Reset
             if (entryDoc instanceof Text) {
                 Text textDoc = (Text) entryDoc;
-                String text = textDoc.text();
-                output.append(text);
+                output.append(textDoc.text());
             } else if (entryDoc instanceof LineOr) {
                 output.append(System.lineSeparator());
                 for (int i = 0; i < entryIndent; i++) {
                     output.append(" ");
                 }
+            } else if (entryDoc instanceof Reset) {
+                Attrs resetAttrs = attrsStack.removeFirst();
+                Attrs prevAttrs = attrsStack.peekFirst();
+                output.append(resetAttrs.transitionTo(prevAttrs));
+            } else if (entryDoc instanceof Escape) {
+                Escape escapeDoc = (Escape) entryDoc;
+                Attrs escapeAttrs = escapeDoc.attrs();
+                Attrs prevAttrs = attrsStack.peekFirst();
+                // Start with everything explicitly turned off;
+                // This means that as long as we merge all of our attributes,
+                // we don't have to deal with nulls in `transitionTo`
+                if (prevAttrs == null) { prevAttrs = Attrs.EMPTY; }
+                Attrs mergedAttrs = prevAttrs.merge(escapeAttrs);
+                attrsStack.addFirst(mergedAttrs);
+                output.append(prevAttrs.transitionTo(mergedAttrs));
             }
+        }
+    }
+
+    /**
+     * Renders the input {@link com.opencastsoftware.prettier4j.Doc Doc} into a
+     * {@link java.lang.String String}, aiming to lay out the document with at most
+     * {@code width} characters on each line.
+     *
+     * @param width  the preferred maximum rendering width.
+     * @param doc    the document to be rendered.
+     * @return the document laid out as a {@link java.lang.String String}.
+     */
+    public static String render(int width, Doc doc) {
+        StringBuilder output = new StringBuilder();
+
+        try {
+            render(width, doc, output);
+        } catch (IOException ioe) {
+            throw new UncheckedIOException(ioe);
         }
 
         return output.toString();
