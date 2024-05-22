@@ -8,13 +8,10 @@ import com.opencastsoftware.prettier4j.ansi.Attrs;
 
 import java.io.IOException;
 import java.io.UncheckedIOException;
+import java.util.*;
 import java.util.AbstractMap.SimpleEntry;
-import java.util.ArrayDeque;
-import java.util.Collection;
-import java.util.Deque;
-import java.util.Map;
 import java.util.function.BinaryOperator;
-import java.util.function.UnaryOperator;
+import java.util.function.LongUnaryOperator;
 import java.util.stream.Stream;
 
 /**
@@ -224,8 +221,7 @@ public abstract class Doc {
                         .append(lineDoc.append(right)));
     }
 
-    @SafeVarargs
-    public final Doc styled(UnaryOperator<Attrs.Builder> ...styles) {
+    public final Doc styled(LongUnaryOperator ...styles) {
         return styled(this, styles);
     }
 
@@ -642,41 +638,82 @@ public abstract class Doc {
 
     public static class Styled extends Doc {
         private final Doc doc;
-        private final Attrs attrs;
+        private final LongUnaryOperator[] styles;
 
-        Styled(Doc doc, Attrs attrs) {
+        Styled(Doc doc, LongUnaryOperator[] styles) {
             this.doc = doc;
-            this.attrs = attrs;
+            this.styles = styles;
         }
 
         public Doc doc() {
             return doc;
         }
 
-        public Attrs attrs() {
-            return attrs;
+        public LongUnaryOperator[] styles() {
+            return styles;
         }
 
         @Override
         Doc flatten() {
-            return new Styled(doc.flatten(), attrs);
+            return new Styled(doc.flatten(), styles);
+        }
+
+        @Override
+        public boolean equals(Object o) {
+            if (this == o) return true;
+            if (o == null || getClass() != o.getClass()) return false;
+            Styled styled = (Styled) o;
+            return Objects.equals(doc, styled.doc) && Objects.deepEquals(styles, styled.styles);
+        }
+
+        @Override
+        public int hashCode() {
+            return Objects.hash(doc, Arrays.hashCode(styles));
+        }
+
+        @Override
+        public String toString() {
+            return "Styled [" +
+                    "doc=" + doc +
+                    ", styles=" + Arrays.toString(styles) +
+                    ']';
         }
     }
 
     public static class Escape extends Doc {
-        private final Attrs attrs;
+        private final LongUnaryOperator[] styles;
 
-        public Escape(Attrs attrs) {
-            this.attrs = attrs;
+        public Escape(LongUnaryOperator[] styles) {
+            this.styles = styles;
         }
 
-        public Attrs attrs() {
-            return this.attrs;
+        public LongUnaryOperator[] styles() {
+            return this.styles;
         }
 
         @Override
         Doc flatten() {
             return this;
+        }
+
+        @Override
+        public boolean equals(Object o) {
+            if (this == o) return true;
+            if (o == null || getClass() != o.getClass()) return false;
+            Escape escape = (Escape) o;
+            return Objects.deepEquals(styles, escape.styles);
+        }
+
+        @Override
+        public int hashCode() {
+            return Arrays.hashCode(styles);
+        }
+
+        @Override
+        public String toString() {
+            return "Escape [" +
+                    "styles=" + Arrays.toString(styles) +
+                    ']';
         }
     }
 
@@ -693,6 +730,11 @@ public abstract class Doc {
         @Override
         Doc flatten() {
             return this;
+        }
+
+        @Override
+        public String toString() {
+            return "Reset []";
         }
     }
 
@@ -800,15 +842,8 @@ public abstract class Doc {
         return new LineOr(text(altText));
     }
 
-    @SafeVarargs
-    public static Doc styled(Doc doc, UnaryOperator<Attrs.Builder> ...styles) {
-        Attrs.Builder builder = new Attrs.Builder();
-
-        for (UnaryOperator<Attrs.Builder> style : styles) {
-            style.apply(builder);
-        }
-
-        return new Styled(doc, builder.build());
+    public static Doc styled(Doc doc, LongUnaryOperator...styles) {
+        return new Styled(doc, styles);
     }
 
     /**
@@ -967,7 +1002,7 @@ public abstract class Doc {
                 // Note reverse order
                 inQueue.addFirst(new SimpleEntry<>(entryIndent, new Reset()));
                 inQueue.addFirst(new SimpleEntry<>(entryIndent, styledDoc.doc()));
-                inQueue.addFirst(new SimpleEntry<>(entryIndent, new Escape(styledDoc.attrs())));
+                inQueue.addFirst(new SimpleEntry<>(entryIndent, new Escape(styledDoc.styles())));
             } else if (entryDoc instanceof Indent) {
                 // Eliminate Indent
                 Indent indentDoc = (Indent) entryDoc;
@@ -1052,15 +1087,11 @@ public abstract class Doc {
                 output.append(resetAttrs.transitionTo(prevAttrs));
             } else if (entryDoc instanceof Escape) {
                 Escape escapeDoc = (Escape) entryDoc;
-                Attrs escapeAttrs = escapeDoc.attrs();
                 Attrs prevAttrs = attrsStack.peekFirst();
-                // Start with everything explicitly turned off;
-                // This means that as long as we merge all of our attributes,
-                // we don't have to deal with nulls in `transitionTo`
-                if (prevAttrs == null) { prevAttrs = Attrs.EMPTY; }
-                Attrs mergedAttrs = prevAttrs.merge(escapeAttrs);
-                attrsStack.addFirst(mergedAttrs);
-                output.append(prevAttrs.transitionTo(mergedAttrs));
+                if (prevAttrs == null) { prevAttrs = Attrs.empty(); }
+                Attrs newAttrs = prevAttrs.withStyles(escapeDoc.styles());
+                attrsStack.addFirst(newAttrs);
+                output.append(prevAttrs.transitionTo(newAttrs));
             }
         }
     }

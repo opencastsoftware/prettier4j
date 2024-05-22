@@ -4,89 +4,42 @@
  */
 package com.opencastsoftware.prettier4j.ansi;
 
-import java.util.function.UnaryOperator;
+import java.util.Objects;
+import java.util.function.LongUnaryOperator;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
 public class Attrs {
-    private final Color fgColor;
-    private final Color bgColor;
-    private final Boolean bold;
-    private final Boolean faint;
-    private final Boolean italic;
-    private final Boolean underline;
-    private final Boolean blink;
-    private final Boolean inverse;
-    private final Boolean strikethrough;
+    static final long FG_COLOR_TYPE_SHIFT = Byte.SIZE * 7;
+    static final long FG_COLOR_TYPE_MASK = 0xF0FF_FFFF_FFFF_FFFFL;
 
-    Attrs(
-      Color fgColor,
-      Color bgColor,
-      Boolean bold,
-      Boolean faint,
-      Boolean italic,
-      Boolean underline,
-      Boolean blink,
-      Boolean inverse,
-      Boolean strikethrough) {
-        this.fgColor = fgColor;
-        this.bgColor = bgColor;
-        this.bold = bold;
-        this.faint = faint;
-        this.italic = italic;
-        this.underline = underline;
-        this.blink = blink;
-        this.inverse = inverse;
-        this.strikethrough = strikethrough;
+    static final long FG_COLOR_SHIFT = Byte.SIZE;
+    static final long FG_COLOR_MASK = 0xFFFF_FFFF_0000_00FFL;
+
+    static final long BG_COLOR_TYPE_SHIFT = Byte.SIZE * 7 + 4;
+    static final long BG_COLOR_TYPE_MASK = 0xFFF_FFFF_FFFF_FFFFL;
+
+    static final long BG_COLOR_SHIFT = Byte.SIZE * 4;
+    static final long BG_COLOR_MASK = 0xFF00_0000_FFFF_FFFFL;
+
+    private final long attrs;
+
+    private static final Attrs EMPTY = new Attrs(0L);
+
+    public static Attrs empty() {
+        return Attrs.EMPTY;
     }
 
-    public String apply() {
-        IntStream.Builder builder = IntStream.builder();
-
-        if (isBold() != null && isBold()) {
-            builder.add(DisplayStyle.BOLD.code());
-        }
-        if (isFaint() != null && isFaint()) {
-            builder.add(DisplayStyle.FAINT.code());
-        }
-        if (isItalic() != null && isItalic()) {
-            builder.add(DisplayStyle.ITALIC.code());
-        }
-        if (isUnderline() != null && isUnderline()) {
-            builder.add(DisplayStyle.UNDERLINE.code());
-        }
-        if (isBlink() != null && isBlink()) {
-            builder.add(DisplayStyle.BLINK.code());
-        }
-        if (isInverse() != null && isInverse()) {
-            builder.add(DisplayStyle.INVERSE.code());
-        }
-        if (isStrikethrough() != null && isStrikethrough()) {
-            builder.add(DisplayStyle.STRIKETHROUGH.code());
-        }
-        if (fgColor() != null) {
-            for (int param : fgColor().fgParams()) {
-                builder.add(param);
-            }
-        }
-        if (bgColor() != null) {
-            for (int param : bgColor().bgParams()) {
-                builder.add(param);
-            }
-        }
-
-        String sgrParams = builder.build()
-                .mapToObj(Integer::toString)
-                .collect(Collectors.joining(";"));
-
-        return Ansi.CSI + sgrParams + 'm';
+    Attrs(long attrs) {
+        this.attrs = attrs;
     }
 
-    public Attrs merge(Attrs other) {
-        Builder builder = new Builder();
-        builder.buildFrom(this);
-        builder.buildFrom(other);
-        return builder.build();
+    public Attrs withStyles(LongUnaryOperator ...styles) {
+        long attrs = this.attrs;
+        for (LongUnaryOperator style : styles) {
+            attrs = style.applyAsLong(attrs);
+        }
+        return new Attrs(attrs);
     }
 
     public String transitionTo(Attrs next) {
@@ -156,197 +109,93 @@ public class Attrs {
         return Ansi.CSI + sgrParams + 'm';
     }
 
+    private ColorType colorType(long shiftValue) {
+        int colorTypeBits = (int) (attrs >>> shiftValue) & 0xF;
+        return ColorType.withCode(colorTypeBits);
+    }
+
+    public ColorType fgColorType() {
+        return colorType(FG_COLOR_TYPE_SHIFT);
+    }
+
+    public ColorType bgColorType() {
+        return colorType(BG_COLOR_TYPE_SHIFT);
+    }
+
+    private Color color(ColorType colorType, long shiftValue) {
+        if (colorType == null) {
+            return null;
+        }
+
+        int colorBits = (int) (attrs >>> shiftValue) & 0xFFFFFF;
+
+        switch (colorType) {
+            case COLOR_16:
+                return Color16.withCode(colorBits);
+            case COLOR_256:
+                return new Color256(colorBits);
+            case COLOR_RGB:
+                return ColorRgb.fromPacked(colorBits);
+        }
+
+        return null;
+    }
+
     public Color fgColor() {
-        return fgColor;
+        ColorType colorType = fgColorType();
+        return color(colorType, FG_COLOR_SHIFT);
     }
 
     public Color bgColor() {
-        return bgColor;
+        ColorType colorType = bgColorType();
+        return color(colorType, BG_COLOR_SHIFT);
     }
 
     public Boolean isBold() {
-        return bold;
+        return (attrs & 1) > 0;
     }
 
     public Boolean isFaint() {
-        return faint;
+        return (attrs & (1L << 1)) > 0;
     }
 
     public Boolean isItalic() {
-        return italic;
+        return (attrs & (1L << 2)) > 0;
     }
 
     public Boolean isUnderline() {
-        return underline;
+        return (attrs & (1L << 3)) > 0;
     }
 
     public Boolean isBlink() {
-        return blink;
+        return (attrs & (1L << 4)) > 0;
     }
 
     public Boolean isInverse() {
-        return inverse;
+        return (attrs & (1L << 5)) > 0;
     }
 
     public Boolean isStrikethrough() {
-        return strikethrough != null && strikethrough;
+        return (attrs & (1L << 6)) > 0;
     }
 
-    public static Attrs EMPTY = new Attrs(null, null, false, false, false, false, false, false, false);
-
-    public static UnaryOperator<Builder> fg(Color color) {
-        return builder -> builder.withFg(color);
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        Attrs attrs1 = (Attrs) o;
+        return attrs == attrs1.attrs;
     }
 
-    public static UnaryOperator<Builder> bg(Color color) {
-        return builder -> builder.withBg(color);
+    @Override
+    public int hashCode() {
+        return Objects.hashCode(attrs);
     }
 
-    public static UnaryOperator<Builder> bold() {
-        return Builder::withBold;
-    }
-
-    public static UnaryOperator<Builder> faint() {
-        return Builder::withFaint;
-    }
-
-    public static UnaryOperator<Builder> italic() {
-        return Builder::withItalic;
-    }
-
-    public static UnaryOperator<Builder> underline() {
-        return Builder::withUnderline;
-    }
-
-    public static UnaryOperator<Builder> blink() {
-        return Builder::withBlink;
-    }
-
-    public static UnaryOperator<Builder> inverse() {
-        return Builder::withInverse;
-    }
-
-    public static UnaryOperator<Builder> strikethrough() {
-        return Builder::withStrikethrough;
-    }
-
-    public static class Builder {
-        private Color fgColor;
-        private Color bgColor;
-        private Boolean bold;
-        private Boolean faint;
-        private Boolean italic;
-        private Boolean underline;
-        private Boolean blink;
-        private Boolean inverse;
-        private Boolean strikethrough;
-
-        public Builder buildFrom(Attrs existing) {
-            if (existing.fgColor() != null) {
-                withFg(existing.fgColor());
-            }
-            if (existing.bgColor() != null) {
-                withBg(existing.bgColor());
-            }
-            if (existing.isBold() != null) {
-                withBold(existing.isBold());
-            }
-            if (existing.isFaint() != null) {
-                withFaint(existing.isFaint());
-            }
-            if (existing.isItalic() != null) {
-                withItalic(existing.isItalic());
-            }
-            if (existing.isUnderline() != null) {
-                withUnderline(existing.isUnderline());
-            }
-            if (existing.isBlink() != null) {
-                withBlink(existing.isBlink());
-            }
-            if (existing.isInverse() != null) {
-                withInverse(existing.isInverse());
-            }
-            if (existing.isStrikethrough() != null) {
-                withStrikethrough(existing.isStrikethrough());
-            }
-            return this;
-        }
-
-        public Attrs build() {
-            return new Attrs(fgColor, bgColor, bold, faint, italic, underline, blink, inverse, strikethrough);
-        }
-
-        public Builder withFg(Color color) {
-            this.fgColor = color;
-            return this;
-        }
-
-        public Builder withBg(Color color) {
-            this.bgColor = color;
-            return this;
-        }
-
-        public Builder withBold() {
-            this.bold = true;
-            return this;
-        }
-        public Builder withBold(boolean bold) {
-            this.bold = bold;
-            return this;
-        }
-
-        public Builder withFaint() {
-            this.faint = true;
-            return this;
-        }
-        public Builder withFaint(boolean faint) {
-            this.faint = faint;
-            return this;
-        }
-
-        public Builder withItalic() {
-            this.italic = true;
-            return this;
-        }
-        public Builder withItalic(boolean italic) {
-            this.italic = italic;
-            return this;
-        }
-
-        public Builder withUnderline() {
-            this.underline = true;
-            return this;
-        }
-        public Builder withUnderline(boolean underline) {
-            this.underline = underline;
-            return this;
-        }
-
-        public Builder withBlink() {
-            this.blink = true;
-            return this;
-        }
-        public Builder withBlink(boolean blink) {
-            this.blink = blink;
-            return this;
-        }
-
-        public Builder withInverse() {
-            this.inverse = true;
-            return this;
-        }
-        public Builder withInverse(boolean inverse) {
-            this.inverse = inverse;
-            return this;
-        }
-
-        public Builder withStrikethrough() {
-            this.strikethrough = true;
-            return this;
-        }
-        public Builder withStrikethrough(boolean strikethrough) {
-            this.strikethrough = strikethrough;
-            return this;
-        }
+    @Override
+    public String toString() {
+        return "Attrs [" +
+                "attrs=" + attrs +
+                ']';
     }
 }

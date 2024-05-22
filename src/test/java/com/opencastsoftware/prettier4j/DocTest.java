@@ -6,8 +6,8 @@ package com.opencastsoftware.prettier4j;
 
 import com.jparams.verifier.tostring.ToStringVerifier;
 import com.opencastsoftware.prettier4j.ansi.Ansi;
-import com.opencastsoftware.prettier4j.ansi.Attrs;
 import com.opencastsoftware.prettier4j.ansi.Color;
+import com.opencastsoftware.prettier4j.ansi.Styles;
 import net.jqwik.api.*;
 import net.jqwik.api.constraints.IntRange;
 import nl.jqno.equalsverifier.EqualsVerifier;
@@ -219,7 +219,7 @@ public class DocTest {
     @Test
     void testBoldDisplayStyle() {
         String expected = sgrCode(1) + "a" + Ansi.RESET;
-        String actual = text("a").styled(Attrs.bold()).render(80);
+        String actual = text("a").styled(Styles.bold()).render(80);
         char[] expectedChars = expected.toCharArray();
         char[] actualChars = actual.toCharArray();
         assertThat(actualChars, is(equalTo(expectedChars)));
@@ -228,7 +228,7 @@ public class DocTest {
     @Test
     void testFaintDisplayStyle() {
         String expected = sgrCode(2) + "a" + Ansi.RESET;
-        String actual = text("a").styled(Attrs.faint()).render(80);
+        String actual = text("a").styled(Styles.faint()).render(80);
         char[] expectedChars = expected.toCharArray();
         char[] actualChars = actual.toCharArray();
         assertThat(actualChars, is(equalTo(expectedChars)));
@@ -237,7 +237,7 @@ public class DocTest {
     @Test
     void testItalicDisplayStyle() {
         String expected = sgrCode(3) + "a" + Ansi.RESET;
-        String actual = text("a").styled(Attrs.italic()).render(80);
+        String actual = text("a").styled(Styles.italic()).render(80);
         char[] expectedChars = expected.toCharArray();
         char[] actualChars = actual.toCharArray();
         assertThat(actualChars, is(equalTo(expectedChars)));
@@ -246,7 +246,7 @@ public class DocTest {
     @Test
     void testUnderlineDisplayStyle() {
         String expected = sgrCode(4) + "a" + Ansi.RESET;
-        String actual = text("a").styled(Attrs.underline()).render(80);
+        String actual = text("a").styled(Styles.underline()).render(80);
         char[] expectedChars = expected.toCharArray();
         char[] actualChars = actual.toCharArray();
         assertThat(actualChars, is(equalTo(expectedChars)));
@@ -255,7 +255,7 @@ public class DocTest {
     @Test
     void testBlinkDisplayStyle() {
         String expected = sgrCode(5) + "a" + Ansi.RESET;
-        String actual = text("a").styled(Attrs.blink()).render(80);
+        String actual = text("a").styled(Styles.blink()).render(80);
         char[] expectedChars = expected.toCharArray();
         char[] actualChars = actual.toCharArray();
         assertThat(actualChars, is(equalTo(expectedChars)));
@@ -264,7 +264,7 @@ public class DocTest {
     @Test
     void testInverseDisplayStyle() {
         String expected = sgrCode(7) + "a" + Ansi.RESET;
-        String actual = text("a").styled(Attrs.inverse()).render(80);
+        String actual = text("a").styled(Styles.inverse()).render(80);
         char[] expectedChars = expected.toCharArray();
         char[] actualChars = actual.toCharArray();
         assertThat(actualChars, is(equalTo(expectedChars)));
@@ -273,7 +273,7 @@ public class DocTest {
     @Test
     void testStrikethroughDisplayStyle() {
         String expected = sgrCode(9) + "a" + Ansi.RESET;
-        String actual = text("a").styled(Attrs.strikethrough()).render(80);
+        String actual = text("a").styled(Styles.strikethrough()).render(80);
         char[] expectedChars = expected.toCharArray();
         char[] actualChars = actual.toCharArray();
         assertThat(actualChars, is(equalTo(expectedChars)));
@@ -282,7 +282,7 @@ public class DocTest {
     @Test
     void test16ColorFgStyle() {
         String expected = sgrCode(32) + "a" + Ansi.RESET;
-        String actual = text("a").styled(Attrs.fg(Color.green())).render(80);
+        String actual = text("a").styled(Styles.fg(Color.green())).render(80);
         char[] expectedChars = expected.toCharArray();
         char[] actualChars = actual.toCharArray();
         assertThat(actualChars, is(equalTo(expectedChars)));
@@ -298,11 +298,11 @@ public class DocTest {
                         sgrCode(37) + ')' + Ansi.RESET;
 
         // (a, b) should fit into 6 chars ignoring ANSI escapes
-        String actual = text("a").styled(Attrs.fg(Color.green()))
+        String actual = text("a").styled(Styles.fg(Color.green()))
                         .append(text(","))
-                        .appendSpace(text("b").styled(Attrs.fg(Color.red())))
+                        .appendSpace(text("b").styled(Styles.fg(Color.red())))
                         .bracket(2, Doc.lineOrEmpty(), text("("), text(")"))
-                        .styled(Attrs.fg(Color.white()))
+                        .styled(Styles.fg(Color.white()))
                         .render(6);
 
         char[] expectedChars = expected.toCharArray();
@@ -320,11 +320,11 @@ public class DocTest {
                         ')' + Ansi.RESET;
 
         // expanded layout should still break over multiple lines
-        String actual = text("a").styled(Attrs.fg(Color.green()))
+        String actual = text("a").styled(Styles.fg(Color.green()))
                 .append(text(","))
-                .appendLineOrSpace(text("b").styled(Attrs.fg(Color.red())))
+                .appendLineOrSpace(text("b").styled(Styles.fg(Color.red())))
                 .bracket(2, Doc.lineOrEmpty(), text("("), text(")"))
-                .styled(Attrs.fg(Color.white()))
+                .styled(Styles.fg(Color.white()))
                 .render(1);
 
         char[] expectedChars = expected.toCharArray();
@@ -336,7 +336,7 @@ public class DocTest {
     @Test
     void test256ColorFgStyle() {
         String expected = xtermFgCode(128) + "a" + Ansi.RESET;
-        String actual = text("a").styled(Attrs.fg(Color.xterm256(128))).render(80);
+        String actual = text("a").styled(Styles.fg(Color.xterm256(128))).render(80);
         char[] expectedChars = expected.toCharArray();
         char[] actualChars = actual.toCharArray();
         assertThat(actualChars, is(equalTo(expectedChars)));
@@ -352,11 +352,11 @@ public class DocTest {
                         xtermFgCode(255) + ')' + Ansi.RESET;
 
         // (a, b) should fit into 6 chars ignoring ANSI escapes
-        String actual = text("a").styled(Attrs.fg(Color.xterm256(128)))
+        String actual = text("a").styled(Styles.fg(Color.xterm256(128)))
                 .append(text(","))
-                .appendSpace(text("b").styled(Attrs.fg(Color.xterm256(37))))
+                .appendSpace(text("b").styled(Styles.fg(Color.xterm256(37))))
                 .bracket(2, Doc.lineOrEmpty(), text("("), text(")"))
-                .styled(Attrs.fg(Color.xterm256(255)))
+                .styled(Styles.fg(Color.xterm256(255)))
                 .render(6);
 
         char[] expectedChars = expected.toCharArray();
@@ -374,11 +374,11 @@ public class DocTest {
                         ')' + Ansi.RESET;
 
         // expanded layout should still break over multiple lines
-        String actual = text("a").styled(Attrs.fg(Color.xterm256(128)))
+        String actual = text("a").styled(Styles.fg(Color.xterm256(128)))
                 .append(text(","))
-                .appendLineOrSpace(text("b").styled(Attrs.fg(Color.xterm256(37))))
+                .appendLineOrSpace(text("b").styled(Styles.fg(Color.xterm256(37))))
                 .bracket(2, Doc.lineOrEmpty(), text("("), text(")"))
-                .styled(Attrs.fg(Color.xterm256(255)))
+                .styled(Styles.fg(Color.xterm256(255)))
                 .render(1);
 
         char[] expectedChars = expected.toCharArray();
@@ -390,7 +390,7 @@ public class DocTest {
     @Test
     void testRgbColorFgStyle() {
         String expected = rgbFgCode(220, 118, 51) + "a" + Ansi.RESET;
-        String actual = text("a").styled(Attrs.fg(Color.rgb(220, 118, 51))).render(80);
+        String actual = text("a").styled(Styles.fg(Color.rgb(220, 118, 51))).render(80);
         char[] expectedChars = expected.toCharArray();
         char[] actualChars = actual.toCharArray();
         assertThat(actualChars, is(equalTo(expectedChars)));
@@ -406,11 +406,11 @@ public class DocTest {
                         rgbFgCode(20, 143, 119) + ')' + Ansi.RESET;
 
         // (a, b) should fit into 6 chars ignoring ANSI escapes
-        String actual = text("a").styled(Attrs.fg(Color.rgb(220, 118, 51)))
+        String actual = text("a").styled(Styles.fg(Color.rgb(220, 118, 51)))
                 .append(text(","))
-                .appendSpace(text("b").styled(Attrs.fg(Color.rgb(91, 44, 111))))
+                .appendSpace(text("b").styled(Styles.fg(Color.rgb(91, 44, 111))))
                 .bracket(2, Doc.lineOrEmpty(), text("("), text(")"))
-                .styled(Attrs.fg(Color.rgb(20, 143, 119)))
+                .styled(Styles.fg(Color.rgb(20, 143, 119)))
                 .render(6);
 
         char[] expectedChars = expected.toCharArray();
@@ -428,11 +428,11 @@ public class DocTest {
                         ')' + Ansi.RESET;
 
         // expanded layout should still break over multiple lines
-        String actual = text("a").styled(Attrs.fg(Color.rgb(220, 118, 51)))
+        String actual = text("a").styled(Styles.fg(Color.rgb(220, 118, 51)))
                 .append(text(","))
-                .appendLineOrSpace(text("b").styled(Attrs.fg(Color.rgb(91, 44, 111))))
+                .appendLineOrSpace(text("b").styled(Styles.fg(Color.rgb(91, 44, 111))))
                 .bracket(2, Doc.lineOrEmpty(), text("("), text(")"))
-                .styled(Attrs.fg(Color.rgb(20, 143, 119)))
+                .styled(Styles.fg(Color.rgb(20, 143, 119)))
                 .render(1);
 
         char[] expectedChars = expected.toCharArray();
@@ -444,7 +444,7 @@ public class DocTest {
     @Test
     void test16ColorBgStyle() {
         String expected = sgrCode(42) + "a" + Ansi.RESET;
-        String actual = text("a").styled(Attrs.bg(Color.green())).render(80);
+        String actual = text("a").styled(Styles.bg(Color.green())).render(80);
         char[] expectedChars = expected.toCharArray();
         char[] actualChars = actual.toCharArray();
         assertThat(actualChars, is(equalTo(expectedChars)));
@@ -460,11 +460,11 @@ public class DocTest {
                         sgrCode(47) + ')' + Ansi.RESET;
 
         // (a, b) should fit into 6 chars ignoring ANSI escapes
-        String actual = text("a").styled(Attrs.bg(Color.green()))
+        String actual = text("a").styled(Styles.bg(Color.green()))
                 .append(text(","))
-                .appendSpace(text("b").styled(Attrs.bg(Color.red())))
+                .appendSpace(text("b").styled(Styles.bg(Color.red())))
                 .bracket(2, Doc.lineOrEmpty(), text("("), text(")"))
-                .styled(Attrs.bg(Color.white()))
+                .styled(Styles.bg(Color.white()))
                 .render(6);
 
         char[] expectedChars = expected.toCharArray();
@@ -482,11 +482,11 @@ public class DocTest {
                         ')' + Ansi.RESET;
 
         // expanded layout should still break over multiple lines
-        String actual = text("a").styled(Attrs.bg(Color.green()))
+        String actual = text("a").styled(Styles.bg(Color.green()))
                 .append(text(","))
-                .appendLineOrSpace(text("b").styled(Attrs.bg(Color.red())))
+                .appendLineOrSpace(text("b").styled(Styles.bg(Color.red())))
                 .bracket(2, Doc.lineOrEmpty(), text("("), text(")"))
-                .styled(Attrs.bg(Color.white()))
+                .styled(Styles.bg(Color.white()))
                 .render(1);
 
         char[] expectedChars = expected.toCharArray();
@@ -498,7 +498,7 @@ public class DocTest {
     @Test
     void test256ColorBgStyle() {
         String expected = xtermBgCode(128) + "a" + Ansi.RESET;
-        String actual = text("a").styled(Attrs.bg(Color.xterm256(128))).render(80);
+        String actual = text("a").styled(Styles.bg(Color.xterm256(128))).render(80);
         char[] expectedChars = expected.toCharArray();
         char[] actualChars = actual.toCharArray();
         assertThat(actualChars, is(equalTo(expectedChars)));
@@ -514,11 +514,11 @@ public class DocTest {
                         xtermBgCode(255) + ')' + Ansi.RESET;
 
         // (a, b) should fit into 6 chars ignoring ANSI escapes
-        String actual = text("a").styled(Attrs.bg(Color.xterm256(128)))
+        String actual = text("a").styled(Styles.bg(Color.xterm256(128)))
                 .append(text(","))
-                .appendSpace(text("b").styled(Attrs.bg(Color.xterm256(37))))
+                .appendSpace(text("b").styled(Styles.bg(Color.xterm256(37))))
                 .bracket(2, Doc.lineOrEmpty(), text("("), text(")"))
-                .styled(Attrs.bg(Color.xterm256(255)))
+                .styled(Styles.bg(Color.xterm256(255)))
                 .render(6);
 
         char[] expectedChars = expected.toCharArray();
@@ -536,11 +536,11 @@ public class DocTest {
                         ')' + Ansi.RESET;
 
         // expanded layout should still break over multiple lines
-        String actual = text("a").styled(Attrs.fg(Color.xterm256(128)))
+        String actual = text("a").styled(Styles.fg(Color.xterm256(128)))
                 .append(text(","))
-                .appendLineOrSpace(text("b").styled(Attrs.fg(Color.xterm256(37))))
+                .appendLineOrSpace(text("b").styled(Styles.fg(Color.xterm256(37))))
                 .bracket(2, Doc.lineOrEmpty(), text("("), text(")"))
-                .styled(Attrs.fg(Color.xterm256(255)))
+                .styled(Styles.fg(Color.xterm256(255)))
                 .render(1);
 
         char[] expectedChars = expected.toCharArray();
@@ -552,7 +552,7 @@ public class DocTest {
     @Test
     void testRgbColorBgStyle() {
         String expected = rgbBgCode(220, 118, 51) + "a" + Ansi.RESET;
-        String actual = text("a").styled(Attrs.bg(Color.rgb(220, 118, 51))).render(80);
+        String actual = text("a").styled(Styles.bg(Color.rgb(220, 118, 51))).render(80);
         char[] expectedChars = expected.toCharArray();
         char[] actualChars = actual.toCharArray();
         assertThat(actualChars, is(equalTo(expectedChars)));
@@ -568,11 +568,11 @@ public class DocTest {
                         rgbBgCode(20, 143, 119) + ')' + Ansi.RESET;
 
         // (a, b) should fit into 6 chars ignoring ANSI escapes
-        String actual = text("a").styled(Attrs.bg(Color.rgb(220, 118, 51)))
+        String actual = text("a").styled(Styles.bg(Color.rgb(220, 118, 51)))
                 .append(text(","))
-                .appendSpace(text("b").styled(Attrs.bg(Color.rgb(91, 44, 111))))
+                .appendSpace(text("b").styled(Styles.bg(Color.rgb(91, 44, 111))))
                 .bracket(2, Doc.lineOrEmpty(), text("("), text(")"))
-                .styled(Attrs.bg(Color.rgb(20, 143, 119)))
+                .styled(Styles.bg(Color.rgb(20, 143, 119)))
                 .render(6);
 
         char[] expectedChars = expected.toCharArray();
@@ -590,11 +590,11 @@ public class DocTest {
                         ')' + Ansi.RESET;
 
         // expanded layout should still break over multiple lines
-        String actual = text("a").styled(Attrs.fg(Color.rgb(220, 118, 51)))
+        String actual = text("a").styled(Styles.fg(Color.rgb(220, 118, 51)))
                 .append(text(","))
-                .appendLineOrSpace(text("b").styled(Attrs.fg(Color.rgb(91, 44, 111))))
+                .appendLineOrSpace(text("b").styled(Styles.fg(Color.rgb(91, 44, 111))))
                 .bracket(2, Doc.lineOrEmpty(), text("("), text(")"))
-                .styled(Attrs.fg(Color.rgb(20, 143, 119)))
+                .styled(Styles.fg(Color.rgb(20, 143, 119)))
                 .render(1);
 
         char[] expectedChars = expected.toCharArray();
@@ -848,7 +848,7 @@ public class DocTest {
                 .forClasses(
                         Text.class, Append.class,
                         Alternatives.class, Indent.class,
-                        LineOr.class)
+                        LineOr.class, Escape.class, Styled.class)
                 .usingGetClass()
                 .withPrefabValues(Doc.class, left, right)
                 .verify();
@@ -860,7 +860,8 @@ public class DocTest {
                 .forClasses(
                         Text.class, Append.class,
                         Alternatives.class, Indent.class,
-                        LineOr.class, Empty.class)
+                        LineOr.class, Empty.class, Escape.class,
+                        Reset.class, Styled.class)
                 .withPrefabValue(Doc.class, docs().sample())
                 .verify();
 

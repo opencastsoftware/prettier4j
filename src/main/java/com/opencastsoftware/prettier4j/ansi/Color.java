@@ -8,6 +8,8 @@ public interface Color {
     int[] fgParams();
     int[] bgParams();
 
+    ColorType colorType();
+
     static Color black() {
         return Color16.BLACK;
     }

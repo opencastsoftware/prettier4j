@@ -44,4 +44,19 @@ enum Color16 implements Color {
     public int[] bgParams() {
         return new int[] { code() + 40 };
     }
+
+    @Override
+    public ColorType colorType() {
+        return ColorType.COLOR_16;
+    }
+
+    static Color16 withCode(int code) {
+        for (Color16 value : values()) {
+            if (value.code() == code) {
+                return value;
+            }
+        }
+
+        return null;
+    }
 }
