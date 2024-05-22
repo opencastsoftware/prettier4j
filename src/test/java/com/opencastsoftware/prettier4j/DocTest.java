@@ -841,7 +841,7 @@ public class DocTest {
                 .findFirst().get();
 
         // EqualsVerifier doesn't work with singletons,
-        // so we can't test Line, LineOrSpace, LineOrEmpty or Empty:
+        // so we can't test Reset, Line, LineOrSpace, LineOrEmpty or Empty:
         // it requires prefab values for recursive data types and
         // those prefab values must not be equal to each other
         EqualsVerifier
