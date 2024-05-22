@@ -159,7 +159,7 @@ public abstract class Doc {
     /**
      * Bracket the current document by the {@code left} and {@code right} Strings,
      * indented by {@code indent} spaces.
-     *
+     * <p>
      * When collapsed, line separators are replaced by spaces.
      *
      * @param indent the number of spaces of indent to apply.
@@ -174,7 +174,7 @@ public abstract class Doc {
     /**
      * Bracket the current document by the {@code left} and {@code right} documents,
      * indented by {@code indent} spaces.
-     *
+     * <p>
      * When collapsed, line separators are replaced by spaces.
      *
      * @param indent the number of spaces of indent to apply.
@@ -189,7 +189,7 @@ public abstract class Doc {
     /**
      * Bracket the current document by the {@code left} and {@code right} Strings,
      * indented by {@code indent} spaces.
-     *
+     * <p>
      * When collapsed, line separators are replaced by the {@code lineDoc}.
      *
      * @param indent  the number of spaces of indent to apply.
@@ -205,7 +205,7 @@ public abstract class Doc {
     /**
      * Bracket the current document by the {@code left} and {@code right} documents,
      * indented by {@code indent} spaces.
-     *
+     * <p>
      * When collapsed, line separators are replaced by the {@code lineDoc}.
      *
      * @param indent  the number of spaces of indent to apply.
@@ -221,6 +221,14 @@ public abstract class Doc {
                         .append(lineDoc.append(right)));
     }
 
+    /**
+     * Styles the current {@link com.opencastsoftware.prettier4j.Doc Doc} using the styles
+     * provided via {@code styles}.
+     *
+     * @param styles the styles to use to decorate the input {@code doc}.
+     * @return a {@link com.opencastsoftware.prettier4j.Doc Doc} decorated with the ANSI styles provided.
+     * @see Styles
+     */
     public final Doc styled(Styles.StylesOperator...styles) {
         return styled(this, styles);
     }
@@ -353,7 +361,7 @@ public abstract class Doc {
     /**
      * Represents a choice between a flattened and expanded layout for a
      * single {@link com.opencastsoftware.prettier4j.Doc Doc}.
-     *
+     * <p>
      * We must maintain two invariants in constructing this class:
      *
      * <ul>
@@ -636,6 +644,9 @@ public abstract class Doc {
         }
     }
 
+    /**
+     * Represents a {@link com.opencastsoftware.prettier4j.Doc Doc} styled with ANSI escape codes.
+     */
     public static class Styled extends Doc {
         private final Doc doc;
         private final Styles.StylesOperator[] styles;
@@ -680,6 +691,9 @@ public abstract class Doc {
         }
     }
 
+    /**
+     * Represents an ANSI escape code sequence.
+     */
     public static class Escape extends Doc {
         private final Styles.StylesOperator[] styles;
 
@@ -717,6 +731,9 @@ public abstract class Doc {
         }
     }
 
+    /**
+     * Represents the end of scope of some ANSI text styling.
+     */
     public static class Reset extends Doc {
         private static final Reset INSTANCE = new Reset();
 
@@ -783,7 +800,7 @@ public abstract class Doc {
      */
     public static Doc line() {
         return Line.getInstance();
-    };
+    }
 
     /**
      * Creates a {@link com.opencastsoftware.prettier4j.Doc Doc} representing a
@@ -794,7 +811,7 @@ public abstract class Doc {
      */
     public static Doc lineOrEmpty() {
         return LineOrEmpty.getInstance();
-    };
+    }
 
     /**
      * Creates a {@link com.opencastsoftware.prettier4j.Doc Doc} representing a
@@ -805,7 +822,7 @@ public abstract class Doc {
      */
     public static Doc lineOrSpace() {
         return LineOrSpace.getInstance();
-    };
+    }
 
     /**
      * Creates an empty {@link com.opencastsoftware.prettier4j.Doc Doc}.
@@ -842,6 +859,15 @@ public abstract class Doc {
         return new LineOr(text(altText));
     }
 
+    /**
+     * Styles the input {@link com.opencastsoftware.prettier4j.Doc Doc} using the styles
+     * provided via {@code styles}.
+     *
+     * @param doc the input document.
+     * @param styles the styles to use to decorate the input {@code doc}.
+     * @return a {@link com.opencastsoftware.prettier4j.Doc Doc} decorated with the ANSI styles provided.
+     * @see Styles
+     */
     public static Doc styled(Doc doc, Styles.StylesOperator ...styles) {
         return new Styled(doc, styles);
     }
@@ -915,7 +941,7 @@ public abstract class Doc {
     /**
      * Inspects the remaining space on the current line and the entries in the
      * current layout to see whether they fit onto the current line.
-     *
+     * <p>
      * It's only necessary to inspect entries up to the next line break.
      *
      * @param remaining the remaining space on the current line.
@@ -1011,30 +1037,11 @@ public abstract class Doc {
             } else if (entryDoc instanceof Alternatives) {
                 // Eliminate Alternatives
                 Alternatives altDoc = (Alternatives) entryDoc;
-
                 // These entries are already normalized
                 Deque<Map.Entry<Integer, Doc>> chosenEntries = chooseLayout(
                         width, entryIndent, position, altDoc.left(), altDoc.right());
-
-                for (Map.Entry<Integer, Doc> chosenEntry : chosenEntries) {
-                    int chosenIndent = chosenEntry.getKey();
-                    Doc chosenDoc = chosenEntry.getValue();
-
-                    if (chosenDoc instanceof Text) {
-                        Text textDoc = (Text) chosenDoc;
-                        // Keep track of line length
-                        position += textDoc.text().length();
-                        outQueue.addLast(chosenEntry);
-                    } else if (chosenDoc instanceof LineOr) {
-                        // Reset line length
-                        position = chosenIndent;
-                        outQueue.addLast(chosenEntry);
-                    } else if (chosenDoc instanceof Escape) {
-                        outQueue.addLast(chosenEntry);
-                    } else if (chosenDoc instanceof Reset) {
-                        outQueue.addLast(chosenEntry);
-                    }
-                }
+                // Note reverse order
+                chosenEntries.descendingIterator().forEachRemaining(inQueue::addFirst);
             } else if (entryDoc instanceof Text) {
                 Text textDoc = (Text) entryDoc;
                 // Keep track of line length

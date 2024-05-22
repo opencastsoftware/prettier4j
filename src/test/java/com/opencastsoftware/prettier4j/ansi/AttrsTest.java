@@ -110,6 +110,7 @@ public class AttrsTest {
     @Provide
     Arbitrary<Color> colors() {
         return Arbitraries.oneOf(
+                Arbitraries.create(Color::none),
                 Arbitraries.create(Color::black),
                 Arbitraries.create(Color::red),
                 Arbitraries.create(Color::green),

@@ -5,6 +5,6 @@
 package com.opencastsoftware.prettier4j.ansi;
 
 public class Ansi {
-    public static String CSI = "\u001b[";
-    public static String RESET = "\u001b[0m";
+    public static final String CSI = "\u001b[";
+    public static final String RESET = "\u001b[0m";
 }

@@ -93,10 +93,18 @@ public class Attrs {
             for (int param : next.fgColor().fgParams()) {
                 builder.add(param);
             }
+        } else if (next.fgColor() == null && this.fgColor() != null) {
+            for (int param : Color.none().fgParams()) {
+                builder.add(param);
+            }
         }
         // Background color
         if (next.bgColor() != null && !next.bgColor().equals(this.bgColor())) {
             for (int param : next.bgColor().bgParams()) {
+                builder.add(param);
+            }
+        } else if (next.bgColor() == null && this.bgColor() != null) {
+            for (int param : Color.none().bgParams()) {
                 builder.add(param);
             }
         }
@@ -109,8 +117,9 @@ public class Attrs {
     }
 
     private ColorType colorType(long shiftValue) {
-        int colorTypeBits = (int) (attrs >>> shiftValue) & 0xF;
-        return ColorType.withCode(colorTypeBits);
+        int colorTypeCode = (int) (attrs >>> shiftValue) & 0xF;
+        if (colorTypeCode == 0) return null;
+        return ColorType.withCode(colorTypeCode);
     }
 
     public ColorType fgColorType() {

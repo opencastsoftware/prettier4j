@@ -155,7 +155,7 @@ public class Styles {
     }
 
     static abstract class DisplayStylesOperator implements StylesOperator {
-        int shiftValue;
+        private final int shiftValue;
 
         DisplayStylesOperator(int shiftValue) {
             this.shiftValue = shiftValue;

@@ -10,6 +10,10 @@ public interface Color {
 
     ColorType colorType();
 
+    static Color none() {
+        return Color16.DEFAULT;
+    }
+
     static Color black() {
         return Color16.BLACK;
     }
