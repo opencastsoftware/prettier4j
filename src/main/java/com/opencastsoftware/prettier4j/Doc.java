@@ -5,13 +5,13 @@
 package com.opencastsoftware.prettier4j;
 
 import com.opencastsoftware.prettier4j.ansi.Attrs;
+import com.opencastsoftware.prettier4j.ansi.Styles;
 
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.util.*;
 import java.util.AbstractMap.SimpleEntry;
 import java.util.function.BinaryOperator;
-import java.util.function.LongUnaryOperator;
 import java.util.stream.Stream;
 
 /**
@@ -221,7 +221,7 @@ public abstract class Doc {
                         .append(lineDoc.append(right)));
     }
 
-    public final Doc styled(LongUnaryOperator ...styles) {
+    public final Doc styled(Styles.StylesOperator...styles) {
         return styled(this, styles);
     }
 
@@ -638,9 +638,9 @@ public abstract class Doc {
 
     public static class Styled extends Doc {
         private final Doc doc;
-        private final LongUnaryOperator[] styles;
+        private final Styles.StylesOperator[] styles;
 
-        Styled(Doc doc, LongUnaryOperator[] styles) {
+        Styled(Doc doc, Styles.StylesOperator[] styles) {
             this.doc = doc;
             this.styles = styles;
         }
@@ -649,7 +649,7 @@ public abstract class Doc {
             return doc;
         }
 
-        public LongUnaryOperator[] styles() {
+        public Styles.StylesOperator[] styles() {
             return styles;
         }
 
@@ -681,13 +681,13 @@ public abstract class Doc {
     }
 
     public static class Escape extends Doc {
-        private final LongUnaryOperator[] styles;
+        private final Styles.StylesOperator[] styles;
 
-        public Escape(LongUnaryOperator[] styles) {
+        public Escape(Styles.StylesOperator[] styles) {
             this.styles = styles;
         }
 
-        public LongUnaryOperator[] styles() {
+        public Styles.StylesOperator[] styles() {
             return this.styles;
         }
 
@@ -842,7 +842,7 @@ public abstract class Doc {
         return new LineOr(text(altText));
     }
 
-    public static Doc styled(Doc doc, LongUnaryOperator...styles) {
+    public static Doc styled(Doc doc, Styles.StylesOperator ...styles) {
         return new Styled(doc, styles);
     }
 

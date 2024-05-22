@@ -5,7 +5,6 @@
 package com.opencastsoftware.prettier4j.ansi;
 
 import java.util.Objects;
-import java.util.function.LongUnaryOperator;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
@@ -34,9 +33,9 @@ public class Attrs {
         this.attrs = attrs;
     }
 
-    public Attrs withStyles(LongUnaryOperator ...styles) {
+    public Attrs withStyles(Styles.StylesOperator ...styles) {
         long attrs = this.attrs;
-        for (LongUnaryOperator style : styles) {
+        for (Styles.StylesOperator style : styles) {
             attrs = style.applyAsLong(attrs);
         }
         return new Attrs(attrs);

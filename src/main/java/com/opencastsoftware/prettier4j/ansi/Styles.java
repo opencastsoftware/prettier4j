@@ -11,39 +11,39 @@ import java.util.function.LongUnaryOperator;
 import static com.opencastsoftware.prettier4j.ansi.Attrs.*;
 
 public class Styles {
-    public static LongUnaryOperator fg(Color color) {
+    public static StylesOperator fg(Color color) {
         return new Fg(color);
     }
 
-    public static LongUnaryOperator bg(Color color) {
+    public static StylesOperator bg(Color color) {
         return new Bg(color);
     }
 
-    public static LongUnaryOperator bold() {
+    public static StylesOperator bold() {
         return Bold.getInstance();
     }
 
-    public static LongUnaryOperator faint() {
+    public static StylesOperator faint() {
         return Faint.getInstance();
     }
 
-    public static LongUnaryOperator italic() {
+    public static StylesOperator italic() {
         return Italic.getInstance();
     }
 
-    public static LongUnaryOperator underline() {
+    public static StylesOperator underline() {
         return Underline.getInstance();
     }
 
-    public static LongUnaryOperator blink() {
+    public static StylesOperator blink() {
         return Blink.getInstance();
     }
 
-    public static LongUnaryOperator inverse() {
+    public static StylesOperator inverse() {
         return Inverse.getInstance();
     }
 
-    public static LongUnaryOperator strikethrough() {
+    public static StylesOperator strikethrough() {
         return Strikethrough.getInstance();
     }
 
@@ -86,7 +86,7 @@ public class Styles {
         return noColor | (newColor << shiftValue);
     }
 
-    interface StylesOperator extends LongUnaryOperator {}
+    public interface StylesOperator extends LongUnaryOperator {}
 
     static class Fg implements StylesOperator {
         private final Color color;
