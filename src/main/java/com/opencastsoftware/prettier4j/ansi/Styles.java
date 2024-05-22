@@ -4,45 +4,47 @@
  */
 package com.opencastsoftware.prettier4j.ansi;
 
+
+import java.util.Objects;
 import java.util.function.LongUnaryOperator;
 
 import static com.opencastsoftware.prettier4j.ansi.Attrs.*;
 
 public class Styles {
     public static LongUnaryOperator fg(Color color) {
-        return attrs -> withFgColor(attrs, color);
+        return new Fg(color);
     }
 
     public static LongUnaryOperator bg(Color color) {
-        return attrs -> withBgColor(attrs, color);
+        return new Bg(color);
     }
 
     public static LongUnaryOperator bold() {
-        return attrs -> attrs | 1;
+        return Bold.getInstance();
     }
 
     public static LongUnaryOperator faint() {
-        return attrs -> attrs | (1 << 1);
+        return Faint.getInstance();
     }
 
     public static LongUnaryOperator italic() {
-        return attrs -> attrs | (1 << 2);
+        return Italic.getInstance();
     }
 
     public static LongUnaryOperator underline() {
-        return attrs -> attrs | (1 << 3);
+        return Underline.getInstance();
     }
 
     public static LongUnaryOperator blink() {
-        return attrs -> attrs | (1 << 4);
+        return Blink.getInstance();
     }
 
     public static LongUnaryOperator inverse() {
-        return attrs -> attrs | (1 << 5);
+        return Inverse.getInstance();
     }
 
     public static LongUnaryOperator strikethrough() {
-        return attrs -> attrs | (1 << 6);
+        return Strikethrough.getInstance();
     }
 
     private static long withFgColor(long attrs, Color color) {
@@ -82,5 +84,205 @@ public class Styles {
         }
 
         return noColor | (newColor << shiftValue);
+    }
+
+    interface StylesOperator extends LongUnaryOperator {}
+
+    static class Fg implements StylesOperator {
+        private final Color color;
+
+        public Fg(Color color) {
+            this.color = color;
+        }
+
+        @Override
+        public long applyAsLong(long attrs) {
+            return withFgColor(attrs, color);
+        }
+
+        @Override
+        public boolean equals(Object o) {
+            if (this == o) return true;
+            if (o == null || getClass() != o.getClass()) return false;
+            Fg fg = (Fg) o;
+            return Objects.equals(color, fg.color);
+        }
+
+        @Override
+        public int hashCode() {
+            return Objects.hashCode(color);
+        }
+
+        @Override
+        public String toString() {
+            return "Fg [" +
+                    "color=" + color +
+                    ']';
+        }
+    }
+
+    static class Bg implements StylesOperator {
+        private final Color color;
+
+        public Bg(Color color) {
+            this.color = color;
+        }
+
+        @Override
+        public long applyAsLong(long attrs) {
+            return withBgColor(attrs, color);
+        }
+
+        @Override
+        public boolean equals(Object o) {
+            if (this == o) return true;
+            if (o == null || getClass() != o.getClass()) return false;
+            Bg fg = (Bg) o;
+            return Objects.equals(color, fg.color);
+        }
+
+        @Override
+        public int hashCode() {
+            return Objects.hashCode(color);
+        }
+
+        @Override
+        public String toString() {
+            return "Bg [" +
+                    "color=" + color +
+                    ']';
+        }
+    }
+
+    static abstract class DisplayStylesOperator implements StylesOperator {
+        int shiftValue;
+
+        DisplayStylesOperator(int shiftValue) {
+            this.shiftValue = shiftValue;
+        }
+
+        @Override
+        public long applyAsLong(long attrs) {
+            return attrs | (1L << shiftValue);
+        }
+    }
+
+    static class Bold extends DisplayStylesOperator {
+        private static final Bold INSTANCE = new Bold();
+
+        static Bold getInstance() {
+            return INSTANCE;
+        }
+
+        Bold() {
+            super(0);
+        }
+
+        @Override
+        public String toString() {
+            return "Bold []";
+        }
+    }
+
+    static class Faint extends DisplayStylesOperator {
+        private static final Faint INSTANCE = new Faint();
+
+        static Faint getInstance() {
+            return INSTANCE;
+        }
+
+        Faint() {
+            super(1);
+        }
+
+        @Override
+        public String toString() {
+            return "Faint []";
+        }
+    }
+
+    static class Italic extends DisplayStylesOperator {
+        private static final Italic INSTANCE = new Italic();
+
+        static Italic getInstance() {
+            return INSTANCE;
+        }
+
+        Italic() {
+            super(2);
+        }
+
+        @Override
+        public String toString() {
+            return "Italic []";
+        }
+    }
+
+    static class Underline extends DisplayStylesOperator {
+        private static final Underline INSTANCE = new Underline();
+
+        static Underline getInstance() {
+            return INSTANCE;
+        }
+
+        Underline() {
+            super(3);
+        }
+
+        @Override
+        public String toString() {
+            return "Underline []";
+        }
+    }
+
+    static class Blink extends DisplayStylesOperator {
+        private static final Blink INSTANCE = new Blink();
+
+        static Blink getInstance() {
+            return INSTANCE;
+        }
+
+        Blink() {
+            super(4);
+        }
+
+        @Override
+        public String toString() {
+            return "Blink []";
+        }
+    }
+
+    static class Inverse extends DisplayStylesOperator {
+        private static final Inverse INSTANCE = new Inverse();
+
+        static Inverse getInstance() {
+            return INSTANCE;
+        }
+
+        Inverse() {
+            super(5);
+        }
+
+        @Override
+        public String toString() {
+            return "Inverse []";
+        }
+    }
+
+    static class Strikethrough extends DisplayStylesOperator {
+        private static final Strikethrough INSTANCE = new Strikethrough();
+
+        static Strikethrough getInstance() {
+            return INSTANCE;
+        }
+
+        Strikethrough() {
+            super(6);
+        }
+
+        @Override
+        public String toString() {
+            return "Strikethrough []";
+        }
     }
 }

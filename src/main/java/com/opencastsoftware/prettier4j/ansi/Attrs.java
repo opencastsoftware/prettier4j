@@ -151,31 +151,31 @@ public class Attrs {
         return color(colorType, BG_COLOR_SHIFT);
     }
 
-    public Boolean isBold() {
+    public boolean isBold() {
         return (attrs & 1) > 0;
     }
 
-    public Boolean isFaint() {
+    public boolean isFaint() {
         return (attrs & (1L << 1)) > 0;
     }
 
-    public Boolean isItalic() {
+    public boolean isItalic() {
         return (attrs & (1L << 2)) > 0;
     }
 
-    public Boolean isUnderline() {
+    public boolean isUnderline() {
         return (attrs & (1L << 3)) > 0;
     }
 
-    public Boolean isBlink() {
+    public boolean isBlink() {
         return (attrs & (1L << 4)) > 0;
     }
 
-    public Boolean isInverse() {
+    public boolean isInverse() {
         return (attrs & (1L << 5)) > 0;
     }
 
-    public Boolean isStrikethrough() {
+    public boolean isStrikethrough() {
         return (attrs & (1L << 6)) > 0;
     }
 

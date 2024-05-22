@@ -1000,7 +1000,7 @@ public abstract class Doc {
                 // Eliminate Styled
                 Styled styledDoc = (Styled) entryDoc;
                 // Note reverse order
-                inQueue.addFirst(new SimpleEntry<>(entryIndent, new Reset()));
+                inQueue.addFirst(new SimpleEntry<>(entryIndent, Reset.getInstance()));
                 inQueue.addFirst(new SimpleEntry<>(entryIndent, styledDoc.doc()));
                 inQueue.addFirst(new SimpleEntry<>(entryIndent, new Escape(styledDoc.styles())));
             } else if (entryDoc instanceof Indent) {
