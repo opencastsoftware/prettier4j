@@ -110,9 +110,27 @@ public class AttrsTest {
     @Provide
     Arbitrary<Color> colors() {
         return Arbitraries.oneOf(
-                Arbitraries.of(Color16.class),
+                Arbitraries.create(Color::black),
+                Arbitraries.create(Color::red),
+                Arbitraries.create(Color::green),
+                Arbitraries.create(Color::yellow),
+                Arbitraries.create(Color::blue),
+                Arbitraries.create(Color::magenta),
+                Arbitraries.create(Color::cyan),
+                Arbitraries.create(Color::white),
+
+                Arbitraries.create(Color::brightBlack),
+                Arbitraries.create(Color::brightRed),
+                Arbitraries.create(Color::brightGreen),
+                Arbitraries.create(Color::brightYellow),
+                Arbitraries.create(Color::brightBlue),
+                Arbitraries.create(Color::brightMagenta),
+                Arbitraries.create(Color::brightCyan),
+                Arbitraries.create(Color::brightWhite),
+
                 Arbitraries.integers().between(0, 255)
                         .map(Color::xterm256),
+
                 Arbitraries.integers().between(0, 255)
                         .tuple3().map(t -> Color.rgb(t.get1(), t.get2(), t.get3()))
         );
