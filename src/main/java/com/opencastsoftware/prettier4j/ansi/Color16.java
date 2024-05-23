@@ -35,14 +35,22 @@ enum Color16 implements Color {
         return code;
     }
 
+    public int fgCode() {
+        return code + 30;
+    }
+
     @Override
     public int[] fgParams() {
-        return new int[] { code() + 30 };
+        return new int[] { fgCode() };
+    }
+
+    public int bgCode() {
+        return code + 40;
     }
 
     @Override
     public int[] bgParams() {
-        return new int[] { code() + 40 };
+        return new int[] { bgCode() };
     }
 
     @Override

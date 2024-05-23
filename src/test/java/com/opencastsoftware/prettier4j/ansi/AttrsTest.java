@@ -38,6 +38,31 @@ public class AttrsTest {
     }
 
     @Test
+    void emptyAttrsIsNotItalic() {
+        assertFalse(Attrs.empty().isItalic(), "Empty Attrs should not be isItalic");
+    }
+
+    @Test
+    void emptyAttrsIsNotUnderline() {
+        assertFalse(Attrs.empty().isUnderline(), "Empty Attrs should not be isUnderline");
+    }
+
+    @Test
+    void emptyAttrsIsNotBlink() {
+        assertFalse(Attrs.empty().isBlink(), "Empty Attrs should not be isBlink");
+    }
+
+    @Test
+    void emptyAttrsIsNotInverse() {
+        assertFalse(Attrs.empty().isInverse(), "Empty Attrs should not be isInverse");
+    }
+
+    @Test
+    void emptyAttrsIsNotStrikethrough() {
+        assertFalse(Attrs.empty().isStrikethrough(), "Empty Attrs should not be isStrikethrough");
+    }
+
+    @Test
     void boldAttrsIsBold() {
         assertTrue(Attrs.empty().withStyles(Styles.bold()).isBold(), "Bold Attrs should be isBold");
     }
@@ -54,22 +79,22 @@ public class AttrsTest {
 
     @Test
     void underlineAttrsIsUnderline() {
-        assertTrue(Attrs.empty().withStyles(Styles.underline()).isUnderline(), "Italic Attrs should be isItalic");
+        assertTrue(Attrs.empty().withStyles(Styles.underline()).isUnderline(), "Underline Attrs should be isUnderline");
     }
 
     @Test
     void blinkAttrsIsBlink() {
-        assertTrue(Attrs.empty().withStyles(Styles.blink()).isBlink(), "Italic Attrs should be isItalic");
+        assertTrue(Attrs.empty().withStyles(Styles.blink()).isBlink(), "Blink Attrs should be isBlink");
     }
 
     @Test
     void inverseAttrsIsInverse() {
-        assertTrue(Attrs.empty().withStyles(Styles.inverse()).isInverse(), "Italic Attrs should be isItalic");
+        assertTrue(Attrs.empty().withStyles(Styles.inverse()).isInverse(), "Inverse Attrs should be isInverse");
     }
 
     @Test
     void strikethroughAttrsIsStrikethrough() {
-        assertTrue(Attrs.empty().withStyles(Styles.strikethrough()).isStrikethrough(), "Italic Attrs should be isItalic");
+        assertTrue(Attrs.empty().withStyles(Styles.strikethrough()).isStrikethrough(), "Strikethrough Attrs should be isStrikethrough");
     }
 
     @Test

@@ -58,14 +58,18 @@ public class Styles {
     }
 
     private static long withColorType(long attrs, Color color, long maskValue, long shiftValue) {
-        int colorTypeCode = color.colorType().code();
         long noColorType = attrs & maskValue;
+        if (color == null) return noColorType;
+        int colorTypeCode = color.colorType().code();
         long newColorType = (long) colorTypeCode << shiftValue;
         return noColorType | newColorType;
     }
 
     private static long withColor(long attrs, Color color, long maskValue, long shiftValue) {
         long noColor = attrs & maskValue;
+
+        if (color == null) return noColor;
+
         long newColor = 0L;
 
         switch (color.colorType()) {

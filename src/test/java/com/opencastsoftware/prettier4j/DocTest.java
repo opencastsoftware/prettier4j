@@ -226,11 +226,56 @@ public class DocTest {
     }
 
     @Test
+    void testNestedBoldStyle() {
+        String expected =
+                sgrCode(7) + '(' +
+                        sgrCode(1) + 'a' +
+                        sgrCode(22) + ", " +
+                        sgrCode(1) + 'b' +
+                        sgrCode(22) + ')' + Ansi.RESET;
+
+        // (a, b) should fit into 6 chars ignoring ANSI escapes
+        String actual = text("a").styled(Styles.bold())
+                .append(text(","))
+                .appendSpace(text("b").styled(Styles.bold()))
+                .bracket(2, Doc.lineOrEmpty(), text("("), text(")"))
+                .styled(Styles.inverse())
+                .render(6);
+
+        char[] expectedChars = expected.toCharArray();
+        char[] actualChars = actual.toCharArray();
+
+        assertThat(actualChars, is(equalTo(expectedChars)));
+    }
+
+    @Test
     void testFaintDisplayStyle() {
         String expected = sgrCode(2) + "a" + Ansi.RESET;
         String actual = text("a").styled(Styles.faint()).render(80);
         char[] expectedChars = expected.toCharArray();
         char[] actualChars = actual.toCharArray();
+        assertThat(actualChars, is(equalTo(expectedChars)));
+    }
+
+    @Test
+    void testNestedFaintStyle() {
+        String expected =
+                sgrCode(9) + '(' +
+                        sgrCode(2) + 'a' +
+                        sgrCode(22) + ", " +
+                        sgrCode(2) + 'b' +
+                        sgrCode(22) + ')' + Ansi.RESET;
+
+        String actual = text("a").styled(Styles.faint())
+                .append(text(","))
+                .appendSpace(text("b").styled(Styles.faint()))
+                .bracket(2, Doc.lineOrEmpty(), text("("), text(")"))
+                .styled(Styles.strikethrough())
+                .render(6);
+
+        char[] expectedChars = expected.toCharArray();
+        char[] actualChars = actual.toCharArray();
+
         assertThat(actualChars, is(equalTo(expectedChars)));
     }
 
@@ -244,11 +289,55 @@ public class DocTest {
     }
 
     @Test
+    void testNestedItalicStyle() {
+        String expected =
+                sgrCode(1) + '(' +
+                        sgrCode(3) + 'a' +
+                        sgrCode(23) + ", " +
+                        sgrCode(3) + 'b' +
+                        sgrCode(23) + ')' + Ansi.RESET;
+
+        String actual = text("a").styled(Styles.italic())
+                .append(text(","))
+                .appendSpace(text("b").styled(Styles.italic()))
+                .bracket(2, Doc.lineOrEmpty(), text("("), text(")"))
+                .styled(Styles.bold())
+                .render(6);
+
+        char[] expectedChars = expected.toCharArray();
+        char[] actualChars = actual.toCharArray();
+
+        assertThat(actualChars, is(equalTo(expectedChars)));
+    }
+
+    @Test
     void testUnderlineDisplayStyle() {
         String expected = sgrCode(4) + "a" + Ansi.RESET;
         String actual = text("a").styled(Styles.underline()).render(80);
         char[] expectedChars = expected.toCharArray();
         char[] actualChars = actual.toCharArray();
+        assertThat(actualChars, is(equalTo(expectedChars)));
+    }
+
+    @Test
+    void testNestedUnderlineStyle() {
+        String expected =
+                sgrCode(5) + '(' +
+                        sgrCode(4) + 'a' +
+                        sgrCode(24) + ", " +
+                        sgrCode(4) + 'b' +
+                        sgrCode(24) + ')' + Ansi.RESET;
+
+        String actual = text("a").styled(Styles.underline())
+                .append(text(","))
+                .appendSpace(text("b").styled(Styles.underline()))
+                .bracket(2, Doc.lineOrEmpty(), text("("), text(")"))
+                .styled(Styles.blink())
+                .render(6);
+
+        char[] expectedChars = expected.toCharArray();
+        char[] actualChars = actual.toCharArray();
+
         assertThat(actualChars, is(equalTo(expectedChars)));
     }
 
@@ -262,11 +351,55 @@ public class DocTest {
     }
 
     @Test
+    void testNestedBlinkStyle() {
+        String expected =
+                sgrCode(2) + '(' +
+                        sgrCode(5) + 'a' +
+                        sgrCode(25) + ", " +
+                        sgrCode(5) + 'b' +
+                        sgrCode(25) + ')' + Ansi.RESET;
+
+        String actual = text("a").styled(Styles.blink())
+                .append(text(","))
+                .appendSpace(text("b").styled(Styles.blink()))
+                .bracket(2, Doc.lineOrEmpty(), text("("), text(")"))
+                .styled(Styles.faint())
+                .render(6);
+
+        char[] expectedChars = expected.toCharArray();
+        char[] actualChars = actual.toCharArray();
+
+        assertThat(actualChars, is(equalTo(expectedChars)));
+    }
+
+    @Test
     void testInverseDisplayStyle() {
         String expected = sgrCode(7) + "a" + Ansi.RESET;
         String actual = text("a").styled(Styles.inverse()).render(80);
         char[] expectedChars = expected.toCharArray();
         char[] actualChars = actual.toCharArray();
+        assertThat(actualChars, is(equalTo(expectedChars)));
+    }
+
+    @Test
+    void testNestedInverseStyle() {
+        String expected =
+                sgrCode(3) + '(' +
+                        sgrCode(7) + 'a' +
+                        sgrCode(27) + ", " +
+                        sgrCode(7) + 'b' +
+                        sgrCode(27) + ')' + Ansi.RESET;
+
+        String actual = text("a").styled(Styles.inverse())
+                .append(text(","))
+                .appendSpace(text("b").styled(Styles.inverse()))
+                .bracket(2, Doc.lineOrEmpty(), text("("), text(")"))
+                .styled(Styles.italic())
+                .render(6);
+
+        char[] expectedChars = expected.toCharArray();
+        char[] actualChars = actual.toCharArray();
+
         assertThat(actualChars, is(equalTo(expectedChars)));
     }
 
@@ -280,11 +413,107 @@ public class DocTest {
     }
 
     @Test
+    void testNestedStrikethroughStyle() {
+        String expected =
+                sgrCode(1) + '(' +
+                        sgrCode(9) + 'a' +
+                        sgrCode(29) + ", " +
+                        sgrCode(9) + 'b' +
+                        sgrCode(29) + ')' + Ansi.RESET;
+
+        String actual = text("a").styled(Styles.strikethrough())
+                .append(text(","))
+                .appendSpace(text("b").styled(Styles.strikethrough()))
+                .bracket(2, Doc.lineOrEmpty(), text("("), text(")"))
+                .styled(Styles.bold())
+                .render(6);
+
+        char[] expectedChars = expected.toCharArray();
+        char[] actualChars = actual.toCharArray();
+
+        assertThat(actualChars, is(equalTo(expectedChars)));
+    }
+
+    @Test
+    void testNullFgStyle() {
+        String expected = "a";
+        String actual = text("a").styled(Styles.fg(null)).render(80);
+        char[] expectedChars = expected.toCharArray();
+        char[] actualChars = actual.toCharArray();
+        assertThat(actualChars, is(equalTo(expectedChars)));
+    }
+
+    @Test
+    void testNestedNullFgStyle() {
+        String expected =
+                sgrCode(37) + '(' +
+                        sgrCode(39) + 'a' +
+                        sgrCode(37) + ", " +
+                        sgrCode(39) + 'b' +
+                        sgrCode(37) + ')' + Ansi.RESET;
+
+        String actual = text("a").styled(Styles.fg(null))
+                .append(text(","))
+                .appendSpace(text("b").styled(Styles.fg(null)))
+                .bracket(2, Doc.lineOrEmpty(), text("("), text(")"))
+                .styled(Styles.fg(Color.white()))
+                .render(6);
+
+        char[] expectedChars = expected.toCharArray();
+        char[] actualChars = actual.toCharArray();
+
+        assertThat(actualChars, is(equalTo(expectedChars)));
+    }
+
+    @Test
     void test16ColorFgStyle() {
         String expected = sgrCode(32) + "a" + Ansi.RESET;
         String actual = text("a").styled(Styles.fg(Color.green())).render(80);
         char[] expectedChars = expected.toCharArray();
         char[] actualChars = actual.toCharArray();
+        assertThat(actualChars, is(equalTo(expectedChars)));
+    }
+
+    @Test
+    void testPartial16ColorFgStyle() {
+        String expected =
+                    '(' +
+                        sgrCode(32) + 'a' +
+                        Ansi.RESET + ", " +
+                        sgrCode(31) + 'b' +
+                        Ansi.RESET + ')';
+
+        String actual = text("a").styled(Styles.fg(Color.green()))
+                .append(text(","))
+                .appendSpace(text("b").styled(Styles.fg(Color.red())))
+                .bracket(2, Doc.lineOrEmpty(), text("("), text(")"))
+                .render(6);
+
+        char[] expectedChars = expected.toCharArray();
+        char[] actualChars = actual.toCharArray();
+
+        assertThat(actualChars, is(equalTo(expectedChars)));
+    }
+
+    @Test
+    void testPartial16ColorFgStyleWithDisplayStyle() {
+        String expected =
+                sgrCode(3) + '(' +
+                        sgrCode(32) + 'a' +
+                        sgrCode(39) + ", " +
+                        sgrCode(31) + 'b' +
+                        sgrCode(39) + ')' + Ansi.RESET;
+
+        String actual = text("a").styled(Styles.fg(Color.green()))
+                .append(text(","))
+                .appendSpace(text("b").styled(Styles.fg(Color.red())))
+                .bracket(2, Doc.lineOrEmpty(), text("("), text(")"))
+                .styled(Styles.italic())
+                .render(6);
+
+        char[] expectedChars = expected.toCharArray();
+        char[] actualChars = actual.toCharArray();
+
         assertThat(actualChars, is(equalTo(expectedChars)));
     }
 
@@ -297,7 +526,6 @@ public class DocTest {
                         sgrCode(31) + 'b' +
                         sgrCode(37) + ')' + Ansi.RESET;
 
-        // (a, b) should fit into 6 chars ignoring ANSI escapes
         String actual = text("a").styled(Styles.fg(Color.green()))
                         .append(text(","))
                         .appendSpace(text("b").styled(Styles.fg(Color.red())))
@@ -351,7 +579,6 @@ public class DocTest {
                         xtermFgCode(37) + 'b' +
                         xtermFgCode(255) + ')' + Ansi.RESET;
 
-        // (a, b) should fit into 6 chars ignoring ANSI escapes
         String actual = text("a").styled(Styles.fg(Color.xterm256(128)))
                 .append(text(","))
                 .appendSpace(text("b").styled(Styles.fg(Color.xterm256(37))))
@@ -405,7 +632,6 @@ public class DocTest {
                         rgbFgCode(91, 44, 111) + 'b' +
                         rgbFgCode(20, 143, 119) + ')' + Ansi.RESET;
 
-        // (a, b) should fit into 6 chars ignoring ANSI escapes
         String actual = text("a").styled(Styles.fg(Color.rgb(220, 118, 51)))
                 .append(text(","))
                 .appendSpace(text("b").styled(Styles.fg(Color.rgb(91, 44, 111))))
@@ -442,11 +668,85 @@ public class DocTest {
     }
 
     @Test
+    void testNullBgStyle() {
+        String expected = "a";
+        String actual = text("a").styled(Styles.bg(null)).render(80);
+        char[] expectedChars = expected.toCharArray();
+        char[] actualChars = actual.toCharArray();
+        assertThat(actualChars, is(equalTo(expectedChars)));
+    }
+
+    @Test
+    void testNestedNullBgStyle() {
+        String expected =
+                sgrCode(47) + '(' +
+                        sgrCode(49) + 'a' +
+                        sgrCode(47) + ", " +
+                        sgrCode(49) + 'b' +
+                        sgrCode(47) + ')' + Ansi.RESET;
+
+        String actual = text("a").styled(Styles.bg(null))
+                .append(text(","))
+                .appendSpace(text("b").styled(Styles.bg(null)))
+                .bracket(2, Doc.lineOrEmpty(), text("("), text(")"))
+                .styled(Styles.bg(Color.white()))
+                .render(6);
+
+        char[] expectedChars = expected.toCharArray();
+        char[] actualChars = actual.toCharArray();
+
+        assertThat(actualChars, is(equalTo(expectedChars)));
+    }
+
+    @Test
     void test16ColorBgStyle() {
         String expected = sgrCode(42) + "a" + Ansi.RESET;
         String actual = text("a").styled(Styles.bg(Color.green())).render(80);
         char[] expectedChars = expected.toCharArray();
         char[] actualChars = actual.toCharArray();
+        assertThat(actualChars, is(equalTo(expectedChars)));
+    }
+
+    @Test
+    void testPartial16ColorBgStyle() {
+        String expected =
+                '(' +
+                        sgrCode(42) + 'a' +
+                        Ansi.RESET + ", " +
+                        sgrCode(41) + 'b' +
+                        Ansi.RESET + ')';
+
+        String actual = text("a").styled(Styles.bg(Color.green()))
+                .append(text(","))
+                .appendSpace(text("b").styled(Styles.bg(Color.red())))
+                .bracket(2, Doc.lineOrEmpty(), text("("), text(")"))
+                .render(6);
+
+        char[] expectedChars = expected.toCharArray();
+        char[] actualChars = actual.toCharArray();
+
+        assertThat(actualChars, is(equalTo(expectedChars)));
+    }
+
+    @Test
+    void testPartial16ColorBgStyleWithDisplayStyle() {
+        String expected =
+                sgrCode(3) + '(' +
+                        sgrCode(42) + 'a' +
+                        sgrCode(49) + ", " +
+                        sgrCode(41) + 'b' +
+                        sgrCode(49) + ')' + Ansi.RESET;
+
+        String actual = text("a").styled(Styles.bg(Color.green()))
+                .append(text(","))
+                .appendSpace(text("b").styled(Styles.bg(Color.red())))
+                .bracket(2, Doc.lineOrEmpty(), text("("), text(")"))
+                .styled(Styles.italic())
+                .render(6);
+
+        char[] expectedChars = expected.toCharArray();
+        char[] actualChars = actual.toCharArray();
+
         assertThat(actualChars, is(equalTo(expectedChars)));
     }
 
@@ -459,7 +759,6 @@ public class DocTest {
                         sgrCode(41) + 'b' +
                         sgrCode(47) + ')' + Ansi.RESET;
 
-        // (a, b) should fit into 6 chars ignoring ANSI escapes
         String actual = text("a").styled(Styles.bg(Color.green()))
                 .append(text(","))
                 .appendSpace(text("b").styled(Styles.bg(Color.red())))
@@ -513,7 +812,6 @@ public class DocTest {
                         xtermBgCode(37) + 'b' +
                         xtermBgCode(255) + ')' + Ansi.RESET;
 
-        // (a, b) should fit into 6 chars ignoring ANSI escapes
         String actual = text("a").styled(Styles.bg(Color.xterm256(128)))
                 .append(text(","))
                 .appendSpace(text("b").styled(Styles.bg(Color.xterm256(37))))
@@ -567,7 +865,6 @@ public class DocTest {
                         rgbBgCode(91, 44, 111) + 'b' +
                         rgbBgCode(20, 143, 119) + ')' + Ansi.RESET;
 
-        // (a, b) should fit into 6 chars ignoring ANSI escapes
         String actual = text("a").styled(Styles.bg(Color.rgb(220, 118, 51)))
                 .append(text(","))
                 .appendSpace(text("b").styled(Styles.bg(Color.rgb(91, 44, 111))))

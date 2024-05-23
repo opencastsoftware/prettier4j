@@ -5,10 +5,10 @@
 package com.opencastsoftware.prettier4j.ansi;
 
 import java.util.Objects;
-import java.util.stream.Collectors;
-import java.util.stream.IntStream;
 
 public class Attrs {
+    private static final int MAX_SGR_PARAMS = 16;
+
     static final long FG_COLOR_TYPE_SHIFT = Byte.SIZE * 7;
     static final long FG_COLOR_TYPE_MASK = 0xF0FF_FFFF_FFFF_FFFFL;
 
@@ -43,77 +43,79 @@ public class Attrs {
 
     public String transitionTo(Attrs next) {
         if (next == null) {
-            return Ansi.RESET;
+            return this.isEmpty() ? "" : Ansi.RESET;
         }
 
-        IntStream.Builder builder = IntStream.builder();
+        int[] sgrParams = new int[MAX_SGR_PARAMS];
+        int sgrParamsCount = 0;
 
         // Bold & faint are both reset by the same SGR code
-        if (!next.isBold() && !next.isFaint() && (this.isBold() || this.isFaint())) {
-            builder.add(DisplayStyle.NORMAL_INTENSITY.code());
+        if ((next.isBold() || next.isFaint()) ^ (this.isBold() || this.isFaint())) {
+            if (next.isBold()) {
+                sgrParams[sgrParamsCount++] = DisplayStyle.BOLD.code();
+            } else if (next.isFaint()) {
+                sgrParams[sgrParamsCount++] = DisplayStyle.FAINT.code();
+            } else {
+                sgrParams[sgrParamsCount++] = DisplayStyle.NORMAL_INTENSITY.code();
+            }
         }
-        if (next.isBold() && !this.isBold()) {
-            builder.add(DisplayStyle.BOLD.code());
+
+        if (next.isItalic() ^ this.isItalic()) {
+            sgrParams[sgrParamsCount++] = next.isItalic()
+                ? DisplayStyle.ITALIC.code()
+                : DisplayStyle.ITALIC_OFF.code();
         }
-        if (next.isFaint() && !this.isFaint()) {
-            builder.add(DisplayStyle.FAINT.code());
+
+        if (next.isUnderline() ^ this.isUnderline()) {
+            sgrParams[sgrParamsCount++] = next.isUnderline()
+                ? DisplayStyle.UNDERLINE.code()
+                : DisplayStyle.UNDERLINE_OFF.code();
         }
-        // Italic
-        if (next.isItalic() && !this.isItalic()) {
-            builder.add(DisplayStyle.ITALIC.code());
-        } else if (!next.isItalic() && this.isItalic()) {
-            builder.add(DisplayStyle.ITALIC_OFF.code());
+
+        if (next.isBlink() ^ this.isBlink()) {
+            sgrParams[sgrParamsCount++] = next.isBlink()
+                ? DisplayStyle.BLINK.code()
+                : DisplayStyle.BLINK_OFF.code();
         }
-        // Underline
-        if (next.isUnderline() && !this.isUnderline()) {
-            builder.add(DisplayStyle.UNDERLINE.code());
-        } else if (!next.isUnderline() && this.isUnderline()) {
-            builder.add(DisplayStyle.UNDERLINE_OFF.code());
+
+        if (next.isInverse() ^ this.isInverse()) {
+            sgrParams[sgrParamsCount++] = next.isInverse()
+                ? DisplayStyle.INVERSE.code()
+                : DisplayStyle.INVERSE_OFF.code();
         }
-        // Blink
-        if (next.isBlink() && !this.isBlink()) {
-            builder.add(DisplayStyle.BLINK.code());
-        } else if (!next.isBlink() && this.isBlink()) {
-            builder.add(DisplayStyle.BLINK_OFF.code());
+
+        if (next.isStrikethrough() ^ this.isStrikethrough()) {
+            sgrParams[sgrParamsCount++] = next.isStrikethrough()
+                ? DisplayStyle.STRIKETHROUGH.code()
+                : DisplayStyle.STRIKETHROUGH_OFF.code();
         }
-        // Inverse
-        if (next.isInverse() && !this.isInverse()) {
-            builder.add(DisplayStyle.INVERSE.code());
-        } else if (!next.isInverse() && this.isInverse()) {
-            builder.add(DisplayStyle.INVERSE_OFF.code());
-        }
-        // Strikethrough
-        if (next.isStrikethrough() && !this.isStrikethrough()) {
-            builder.add(DisplayStyle.STRIKETHROUGH.code());
-        } else if (!next.isStrikethrough() && this.isStrikethrough()) {
-            builder.add(DisplayStyle.STRIKETHROUGH_OFF.code());
-        }
-        // Foreground color
+
         if (next.fgColor() != null && !next.fgColor().equals(this.fgColor())) {
             for (int param : next.fgColor().fgParams()) {
-                builder.add(param);
+                sgrParams[sgrParamsCount++] = param;
             }
         } else if (next.fgColor() == null && this.fgColor() != null) {
-            for (int param : Color.none().fgParams()) {
-                builder.add(param);
-            }
+            sgrParams[sgrParamsCount++] = Color16.DEFAULT.fgCode();
         }
-        // Background color
+
         if (next.bgColor() != null && !next.bgColor().equals(this.bgColor())) {
             for (int param : next.bgColor().bgParams()) {
-                builder.add(param);
+                sgrParams[sgrParamsCount++] = param;
             }
         } else if (next.bgColor() == null && this.bgColor() != null) {
-            for (int param : Color.none().bgParams()) {
-                builder.add(param);
-            }
+            sgrParams[sgrParamsCount++] = Color16.DEFAULT.bgCode();
         }
 
-        String sgrParams = builder.build()
-            .mapToObj(Integer::toString)
-            .collect(Collectors.joining(";"));
+        if (sgrParamsCount == 0) return "";
 
-        return Ansi.CSI + sgrParams + 'm';
+        StringBuilder result = new StringBuilder(Ansi.CSI);
+
+        for (int i = 0; i < sgrParamsCount; i++) {
+            if (i > 0) result.append(';');
+            result.append(sgrParams[i]);
+        }
+
+        return result.append('m').toString();
     }
 
     private ColorType colorType(long shiftValue) {
@@ -131,9 +133,7 @@ public class Attrs {
     }
 
     private Color color(ColorType colorType, long shiftValue) {
-        if (colorType == null) {
-            return null;
-        }
+        if (colorType == null) return null;
 
         int colorBits = (int) (attrs >>> shiftValue) & 0xFFFFFF;
 
@@ -185,6 +185,10 @@ public class Attrs {
 
     public boolean isStrikethrough() {
         return (attrs & (1L << 6)) > 0;
+    }
+
+    public boolean isEmpty() {
+        return this.equals(EMPTY);
     }
 
     @Override
