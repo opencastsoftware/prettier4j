@@ -141,7 +141,7 @@ public class Attrs {
             case COLOR_16:
                 return Color16.withCode(colorBits);
             case COLOR_256:
-                return new Color256(colorBits);
+                return new ColorXterm(colorBits);
             case COLOR_RGB:
                 return ColorRgb.fromPacked(colorBits);
         }

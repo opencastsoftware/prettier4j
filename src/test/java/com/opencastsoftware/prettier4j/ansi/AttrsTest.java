@@ -155,7 +155,7 @@ public class AttrsTest {
                 Arbitraries.create(Color::brightWhite),
 
                 Arbitraries.integers().between(0, 255)
-                        .map(Color::xterm256),
+                        .map(Color::xterm),
 
                 Arbitraries.integers().between(0, 255)
                         .tuple3().map(t -> Color.rgb(t.get1(), t.get2(), t.get3()))

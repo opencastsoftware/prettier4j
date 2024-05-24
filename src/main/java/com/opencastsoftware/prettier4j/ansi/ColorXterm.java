@@ -6,10 +6,10 @@ package com.opencastsoftware.prettier4j.ansi;
 
 import java.util.Objects;
 
-class Color256 implements Color {
+class ColorXterm implements Color {
     public final int color;
 
-    Color256(int color) {
+    ColorXterm(int color) {
         this.color = color & 0xFF;
     }
 
@@ -36,8 +36,8 @@ class Color256 implements Color {
     public boolean equals(Object o) {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
-        Color256 color256 = (Color256) o;
-        return color == color256.color;
+        ColorXterm colorXterm = (ColorXterm) o;
+        return color == colorXterm.color;
     }
 
     @Override
@@ -47,7 +47,7 @@ class Color256 implements Color {
 
     @Override
     public String toString() {
-        return "Color256 [" +
+        return "ColorXterm [" +
                 "color=" + color +
                 ']';
     }

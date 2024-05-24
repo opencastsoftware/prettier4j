@@ -22,13 +22,13 @@ public class ColorTest {
     void testEquals() {
         EqualsVerifier.forClasses(
                         Color.class, Color16.class,
-                        Color256.class, ColorRgb.class)
+                        ColorXterm.class, ColorRgb.class)
                 .usingGetClass().verify();
     }
 
     @Test
     void testToString() {
-        ToStringVerifier.forClasses(Color16.class, Color256.class, ColorRgb.class).verify();
+        ToStringVerifier.forClasses(Color16.class, ColorXterm.class, ColorRgb.class).verify();
     }
 
     @Property

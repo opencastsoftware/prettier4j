@@ -78,8 +78,8 @@ public class Styles {
                 newColor = color16.code();
                 break;
             case COLOR_256:
-                Color256 color256 = (Color256) color;
-                newColor = color256.color();
+                ColorXterm colorXterm = (ColorXterm) color;
+                newColor = colorXterm.color();
                 break;
             case COLOR_RGB:
                 ColorRgb colorRgb = (ColorRgb) color;

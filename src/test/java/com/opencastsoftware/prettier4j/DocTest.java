@@ -564,7 +564,7 @@ public class DocTest {
     @Test
     void test256ColorFgStyle() {
         String expected = xtermFgCode(128) + "a" + Ansi.RESET;
-        String actual = text("a").styled(Styles.fg(Color.xterm256(128))).render(80);
+        String actual = text("a").styled(Styles.fg(Color.xterm(128))).render(80);
         char[] expectedChars = expected.toCharArray();
         char[] actualChars = actual.toCharArray();
         assertThat(actualChars, is(equalTo(expectedChars)));
@@ -579,11 +579,11 @@ public class DocTest {
                         xtermFgCode(37) + 'b' +
                         xtermFgCode(255) + ')' + Ansi.RESET;
 
-        String actual = text("a").styled(Styles.fg(Color.xterm256(128)))
+        String actual = text("a").styled(Styles.fg(Color.xterm(128)))
                 .append(text(","))
-                .appendSpace(text("b").styled(Styles.fg(Color.xterm256(37))))
+                .appendSpace(text("b").styled(Styles.fg(Color.xterm(37))))
                 .bracket(2, Doc.lineOrEmpty(), text("("), text(")"))
-                .styled(Styles.fg(Color.xterm256(255)))
+                .styled(Styles.fg(Color.xterm(255)))
                 .render(6);
 
         char[] expectedChars = expected.toCharArray();
@@ -601,11 +601,11 @@ public class DocTest {
                         ')' + Ansi.RESET;
 
         // expanded layout should still break over multiple lines
-        String actual = text("a").styled(Styles.fg(Color.xterm256(128)))
+        String actual = text("a").styled(Styles.fg(Color.xterm(128)))
                 .append(text(","))
-                .appendLineOrSpace(text("b").styled(Styles.fg(Color.xterm256(37))))
+                .appendLineOrSpace(text("b").styled(Styles.fg(Color.xterm(37))))
                 .bracket(2, Doc.lineOrEmpty(), text("("), text(")"))
-                .styled(Styles.fg(Color.xterm256(255)))
+                .styled(Styles.fg(Color.xterm(255)))
                 .render(1);
 
         char[] expectedChars = expected.toCharArray();
@@ -797,7 +797,7 @@ public class DocTest {
     @Test
     void test256ColorBgStyle() {
         String expected = xtermBgCode(128) + "a" + Ansi.RESET;
-        String actual = text("a").styled(Styles.bg(Color.xterm256(128))).render(80);
+        String actual = text("a").styled(Styles.bg(Color.xterm(128))).render(80);
         char[] expectedChars = expected.toCharArray();
         char[] actualChars = actual.toCharArray();
         assertThat(actualChars, is(equalTo(expectedChars)));
@@ -812,11 +812,11 @@ public class DocTest {
                         xtermBgCode(37) + 'b' +
                         xtermBgCode(255) + ')' + Ansi.RESET;
 
-        String actual = text("a").styled(Styles.bg(Color.xterm256(128)))
+        String actual = text("a").styled(Styles.bg(Color.xterm(128)))
                 .append(text(","))
-                .appendSpace(text("b").styled(Styles.bg(Color.xterm256(37))))
+                .appendSpace(text("b").styled(Styles.bg(Color.xterm(37))))
                 .bracket(2, Doc.lineOrEmpty(), text("("), text(")"))
-                .styled(Styles.bg(Color.xterm256(255)))
+                .styled(Styles.bg(Color.xterm(255)))
                 .render(6);
 
         char[] expectedChars = expected.toCharArray();
@@ -834,11 +834,11 @@ public class DocTest {
                         ')' + Ansi.RESET;
 
         // expanded layout should still break over multiple lines
-        String actual = text("a").styled(Styles.fg(Color.xterm256(128)))
+        String actual = text("a").styled(Styles.fg(Color.xterm(128)))
                 .append(text(","))
-                .appendLineOrSpace(text("b").styled(Styles.fg(Color.xterm256(37))))
+                .appendLineOrSpace(text("b").styled(Styles.fg(Color.xterm(37))))
                 .bracket(2, Doc.lineOrEmpty(), text("("), text(")"))
-                .styled(Styles.fg(Color.xterm256(255)))
+                .styled(Styles.fg(Color.xterm(255)))
                 .render(1);
 
         char[] expectedChars = expected.toCharArray();

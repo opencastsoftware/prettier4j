@@ -78,8 +78,8 @@ public interface Color {
         return Color16.BRIGHT_WHITE;
     }
 
-    static Color xterm256(int color) {
-        return new Color256(color);
+    static Color xterm(int color) {
+        return new ColorXterm(color);
     }
 
     static Color rgb(int r, int g, int b) {
