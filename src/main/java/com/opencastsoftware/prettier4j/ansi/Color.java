@@ -201,7 +201,7 @@ public interface Color {
      * when {@link com.opencastsoftware.prettier4j.Doc#styled styled}
      * via {@link Styles#fg(Color) fg} or {@link Styles#bg(Color) bg}.
      *
-     * @return a brighter shade of the {@link Color} white.
+     * @return an 8-bit xterm {@link Color}.
      */
     static Color xterm(int color) {
         return new ColorXterm(color);
@@ -212,7 +212,7 @@ public interface Color {
      * when {@link com.opencastsoftware.prettier4j.Doc#styled styled}
      * via {@link Styles#fg(Color) fg} or {@link Styles#bg(Color) bg}.
      *
-     * @return a brighter shade of the {@link Color} white.
+     * @return a 24-bit RGB {@link Color}.
      */
     static Color rgb(int r, int g, int b) {
         return new ColorRgb(r, g, b);
