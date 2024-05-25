@@ -11,110 +11,189 @@ import java.util.function.LongUnaryOperator;
 import static com.opencastsoftware.prettier4j.ansi.Attrs.*;
 
 public class Styles {
+    private Styles() {}
+
+    /**
+     * Sets the foreground color for a {@link com.opencastsoftware.prettier4j.Doc Doc}
+     * when used as an argument to {@link com.opencastsoftware.prettier4j.Doc#styled styled}.
+     *
+     * @param color the {@link Color} to apply as the foreground color.
+     * @return a {@link StylesOperator} that applies the given foreground {@link Color}.
+     */
     public static StylesOperator fg(Color color) {
         return new Fg(color);
     }
 
+    /**
+     * Sets the background color for a {@link com.opencastsoftware.prettier4j.Doc Doc}
+     * when used as an argument to {@link com.opencastsoftware.prettier4j.Doc#styled styled}.
+     *
+     * @param color the {@link Color} to apply as the background color.
+     * @return a {@link StylesOperator} that applies the given background {@link Color}.
+     */
     public static StylesOperator bg(Color color) {
         return new Bg(color);
     }
 
+    /**
+     * Sets the bold display style for a {@link com.opencastsoftware.prettier4j.Doc Doc}
+     * when used as an argument to {@link com.opencastsoftware.prettier4j.Doc#styled styled}.
+     *
+     * @return a {@link StylesOperator} that applies the bold display style.
+     */
     public static StylesOperator bold() {
         return Bold.getInstance();
     }
 
+    /**
+     * Sets the faint display style for a {@link com.opencastsoftware.prettier4j.Doc Doc}
+     * when used as an argument to {@link com.opencastsoftware.prettier4j.Doc#styled styled}.
+     *
+     * @return a {@link StylesOperator} that applies the faint display style.
+     */
     public static StylesOperator faint() {
         return Faint.getInstance();
     }
 
+    /**
+     * Sets the italic display style for a {@link com.opencastsoftware.prettier4j.Doc Doc}
+     * when used as an argument to {@link com.opencastsoftware.prettier4j.Doc#styled styled}.
+     *
+     * @return a {@link StylesOperator} that applies the italic display style.
+     */
     public static StylesOperator italic() {
         return Italic.getInstance();
     }
 
+    /**
+     * Sets the underline display style for a {@link com.opencastsoftware.prettier4j.Doc Doc}
+     * when used as an argument to {@link com.opencastsoftware.prettier4j.Doc#styled styled}.
+     *
+     * @return a {@link StylesOperator} that applies the underline display style.
+     */
     public static StylesOperator underline() {
         return Underline.getInstance();
     }
 
+    /**
+     * Sets the blink display style for a {@link com.opencastsoftware.prettier4j.Doc Doc}
+     * when used as an argument to {@link com.opencastsoftware.prettier4j.Doc#styled styled}.
+     *
+     * @return a {@link StylesOperator} that applies the blink display style.
+     */
     public static StylesOperator blink() {
         return Blink.getInstance();
     }
 
+    /**
+     * Sets the inverse display style for a {@link com.opencastsoftware.prettier4j.Doc Doc}
+     * when used as an argument to {@link com.opencastsoftware.prettier4j.Doc#styled styled}.
+     *
+     * @return a {@link StylesOperator} that applies the inverse display style.
+     */
     public static StylesOperator inverse() {
         return Inverse.getInstance();
     }
 
+    /**
+     * Sets the strikethrough display style for a {@link com.opencastsoftware.prettier4j.Doc Doc}
+     * when used as an argument to {@link com.opencastsoftware.prettier4j.Doc#styled styled}.
+     *
+     * @return a {@link StylesOperator} that applies the strikethrough display style.
+     */
     public static StylesOperator strikethrough() {
         return Strikethrough.getInstance();
     }
 
-    private static long withFgColor(long attrs, Color color) {
-        long withColorType = withColorType(attrs, color, FG_COLOR_TYPE_MASK, FG_COLOR_TYPE_SHIFT);
-        return withColor(withColorType, color, FG_COLOR_MASK, FG_COLOR_SHIFT);
-    }
-
-    private static long withBgColor(long attrs, Color color) {
-        long withColorType = withColorType(attrs, color, BG_COLOR_TYPE_MASK, BG_COLOR_TYPE_SHIFT);
-        return withColor(withColorType, color, BG_COLOR_MASK, BG_COLOR_SHIFT);
-    }
-
-    private static long withColorType(long attrs, Color color, long maskValue, long shiftValue) {
-        long noColorType = attrs & maskValue;
-        if (color == null) return noColorType;
-        int colorTypeCode = color.colorType().code();
-        long newColorType = (long) colorTypeCode << shiftValue;
-        return noColorType | newColorType;
-    }
-
-    private static long withColor(long attrs, Color color, long maskValue, long shiftValue) {
-        long noColor = attrs & maskValue;
-
-        if (color == null) return noColor;
-
-        long newColor = 0L;
-
-        switch (color.colorType()) {
-            case COLOR_16:
-                Color16 color16 = (Color16) color;
-                newColor = color16.code();
-                break;
-            case COLOR_256:
-                ColorXterm colorXterm = (ColorXterm) color;
-                newColor = colorXterm.color();
-                break;
-            case COLOR_RGB:
-                ColorRgb colorRgb = (ColorRgb) color;
-                newColor = colorRgb.packed();
-                break;
-        }
-
-        return noColor | (newColor << shiftValue);
-    }
-
+    /**
+     * An operator that is used to apply display styles to a {@link com.opencastsoftware.prettier4j.Doc Doc}.
+     */
     public interface StylesOperator extends LongUnaryOperator {}
 
-    static class Fg implements StylesOperator {
-        private final Color color;
+    static abstract class ColorStylesOperator implements StylesOperator {
+        protected final Color color;
 
-        public Fg(Color color) {
+        private final long colorTypeMask;
+        private final long colorTypeShift;
+
+        private final long colorMask;
+        private final long colorShift;
+
+        ColorStylesOperator(
+                Color color,
+                long colorTypeMask,
+                long colorTypeShift,
+                long colorMask,
+                long colorShift) {
             this.color = color;
+            this.colorTypeMask = colorTypeMask;
+            this.colorTypeShift = colorTypeShift;
+            this.colorMask = colorMask;
+            this.colorShift = colorShift;
+        }
+
+        private long withColorType(long attrs) {
+            long noColorType = attrs & colorTypeMask;
+            if (color == null) return noColorType;
+            int colorTypeCode = color.colorType().code();
+            long newColorType = (long) colorTypeCode << colorTypeShift;
+            return noColorType | newColorType;
+        }
+
+        private long withColor(long attrs) {
+            long noColor = attrs & colorMask;
+
+            if (color == null) return noColor;
+
+            long newColor = 0L;
+
+            switch (color.colorType()) {
+                case COLOR_16:
+                    Color16 color16 = (Color16) color;
+                    newColor = color16.code();
+                    break;
+                case COLOR_XTERM:
+                    ColorXterm colorXterm = (ColorXterm) color;
+                    newColor = colorXterm.color();
+                    break;
+                case COLOR_RGB:
+                    ColorRgb colorRgb = (ColorRgb) color;
+                    newColor = colorRgb.packed();
+                    break;
+            }
+
+            return noColor | (newColor << colorShift);
         }
 
         @Override
         public long applyAsLong(long attrs) {
-            return withFgColor(attrs, color);
+            long withColorType = withColorType(attrs);
+            return withColor(withColorType);
         }
 
         @Override
         public boolean equals(Object o) {
             if (this == o) return true;
             if (o == null || getClass() != o.getClass()) return false;
-            Fg fg = (Fg) o;
-            return Objects.equals(color, fg.color);
+            ColorStylesOperator that = (ColorStylesOperator) o;
+            return colorTypeMask == that.colorTypeMask &&
+                    colorTypeShift == that.colorTypeShift &&
+                    colorMask == that.colorMask &&
+                    colorShift == that.colorShift &&
+                    Objects.equals(color, that.color);
         }
 
         @Override
         public int hashCode() {
-            return Objects.hashCode(color);
+            return Objects.hash(color, colorTypeMask, colorTypeShift, colorMask, colorShift);
+        }
+    }
+
+    static class Fg extends ColorStylesOperator {
+        Fg(Color color) {
+            super(color,
+                FG_COLOR_TYPE_MASK, FG_COLOR_TYPE_SHIFT,
+                FG_COLOR_MASK, FG_COLOR_SHIFT);
         }
 
         @Override
@@ -125,29 +204,11 @@ public class Styles {
         }
     }
 
-    static class Bg implements StylesOperator {
-        private final Color color;
-
-        public Bg(Color color) {
-            this.color = color;
-        }
-
-        @Override
-        public long applyAsLong(long attrs) {
-            return withBgColor(attrs, color);
-        }
-
-        @Override
-        public boolean equals(Object o) {
-            if (this == o) return true;
-            if (o == null || getClass() != o.getClass()) return false;
-            Bg fg = (Bg) o;
-            return Objects.equals(color, fg.color);
-        }
-
-        @Override
-        public int hashCode() {
-            return Objects.hashCode(color);
+    static class Bg extends ColorStylesOperator {
+        Bg(Color color) {
+            super(color,
+                BG_COLOR_TYPE_MASK, BG_COLOR_TYPE_SHIFT,
+                BG_COLOR_MASK, BG_COLOR_SHIFT);
         }
 
         @Override

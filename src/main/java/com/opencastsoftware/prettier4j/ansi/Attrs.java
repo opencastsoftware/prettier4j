@@ -140,7 +140,7 @@ public class Attrs {
         switch (colorType) {
             case COLOR_16:
                 return Color16.withCode(colorBits);
-            case COLOR_256:
+            case COLOR_XTERM:
                 return new ColorXterm(colorBits);
             case COLOR_RGB:
                 return ColorRgb.fromPacked(colorBits);

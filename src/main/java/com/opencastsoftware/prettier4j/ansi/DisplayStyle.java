@@ -4,7 +4,7 @@
  */
 package com.opencastsoftware.prettier4j.ansi;
 
-public enum DisplayStyle {
+enum DisplayStyle {
     RESET(0),
 
     // Display styles
@@ -30,7 +30,7 @@ public enum DisplayStyle {
         this.code = code;
     }
 
-    public int code() {
+    int code() {
         return this.code;
     }
 }

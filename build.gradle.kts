@@ -69,4 +69,24 @@ tasks.withType<JavaCompile> {
     options.release.set(8)
 }
 
+tasks.withType<Javadoc> {
+    options {
+        this as StandardJavadocDocletOptions
+        addBooleanOption("-allow-script-in-comments", true)
+        header(
+            """
+            |<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/prismjs@1/themes/prism-okaidia.min.css">
+            """
+                .trimMargin()
+        )
+        footer(
+            """
+            |<script src="https://cdn.jsdelivr.net/npm/prismjs@1/components/prism-core.min.js"></script>
+            |<script src="https://cdn.jsdelivr.net/npm/prismjs@1/plugins/autoloader/prism-autoloader.min.js"></script>
+            """
+                .trimMargin()
+        )
+    }
+}
+
 tasks.named<Test>("test") { useJUnitPlatform { includeEngines("junit-jupiter", "jqwik") } }

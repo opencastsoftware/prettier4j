@@ -6,7 +6,7 @@ package com.opencastsoftware.prettier4j.ansi;
 
 public enum ColorType {
     COLOR_16(1),
-    COLOR_256(2),
+    COLOR_XTERM(2),
     COLOR_RGB(4);
 
     private final int code;

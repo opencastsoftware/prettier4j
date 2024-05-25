@@ -228,6 +228,7 @@ public abstract class Doc {
      * @param styles the styles to use to decorate the input {@code doc}.
      * @return a {@link com.opencastsoftware.prettier4j.Doc Doc} decorated with the ANSI styles provided.
      * @see Styles
+     * @see com.opencastsoftware.prettier4j.ansi.Color Color
      */
     public final Doc styled(Styles.StylesOperator...styles) {
         return styled(this, styles);
@@ -243,6 +244,19 @@ public abstract class Doc {
      */
     public String render(int width) {
         return render(width, this);
+    }
+
+    /**
+     * Renders the current {@link com.opencastsoftware.prettier4j.Doc Doc} into an
+     * {@link java.lang.Appendable Appendable}, aiming to lay out the document with at most
+     * {@code width} characters on each line.
+     *
+     * @param width the preferred maximum rendering width.
+     * @param output the output to render into.
+     * @throws IOException if the {@link Appendable} {@code output} throws when {@link Appendable#append(CharSequence) append}ed.
+     */
+    public void render(int width, Appendable output) throws IOException {
+        render(width, this, output);
     }
 
     /**
@@ -867,6 +881,7 @@ public abstract class Doc {
      * @param styles the styles to use to decorate the input {@code doc}.
      * @return a {@link com.opencastsoftware.prettier4j.Doc Doc} decorated with the ANSI styles provided.
      * @see Styles
+     * @see com.opencastsoftware.prettier4j.ansi.Color Color
      */
     public static Doc styled(Doc doc, Styles.StylesOperator ...styles) {
         return new Styled(doc, styles);
@@ -1070,6 +1085,7 @@ public abstract class Doc {
      * @param width  the preferred maximum rendering width.
      * @param doc    the document to be rendered.
      * @param output the output to render into.
+     * @throws IOException if the {@link Appendable} {@code output} throws when {@link Appendable#append(CharSequence) append}ed.
      */
     public static void render(int width, Doc doc, Appendable output) throws IOException {
         Deque<Map.Entry<Integer, Doc>> renderQueue = normalize(width, 0, 0, doc);

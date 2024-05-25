@@ -29,7 +29,7 @@ class ColorXterm implements Color {
 
     @Override
     public ColorType colorType() {
-        return ColorType.COLOR_256;
+        return ColorType.COLOR_XTERM;
     }
 
     @Override

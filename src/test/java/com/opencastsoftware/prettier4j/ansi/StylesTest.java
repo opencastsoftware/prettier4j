@@ -22,6 +22,6 @@ public class StylesTest {
                 Styles.Fg.class, Styles.Bg.class, Styles.Bold.class,
                 Styles.Faint.class, Styles.Italic.class, Styles.Underline.class,
                 Styles.Blink.class, Styles.Inverse.class, Styles.Strikethrough.class)
-            .withIgnoredFields("shiftValue").verify();
+            .withIgnoredFields("shiftValue", "colorTypeMask", "colorTypeShift", "colorMask", "colorShift").verify();
     }
 }
