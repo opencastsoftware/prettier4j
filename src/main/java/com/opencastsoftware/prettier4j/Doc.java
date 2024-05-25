@@ -33,9 +33,17 @@ import java.util.stream.Stream;
  * possible, see the static method
  * {@link com.opencastsoftware.prettier4j.Doc#group(Doc) group}.
  * <p>
- * To render documents to String, see the instance method
- * {@link com.opencastsoftware.prettier4j.Doc#render(int) render} or static
- * method {@link com.opencastsoftware.prettier4j.Doc#render(int, Doc) render}.
+ * To style a {@link Doc} with ANSI escape codes, see the instance method
+ * {@link Doc#styled(Styles.StylesOperator...)} or static method
+ * {@link Doc#styled(Doc, Styles.StylesOperator...)}.
+ * <p>
+ * To render documents to an {@link Appendable} output, see the instance method
+ * {@link Doc#render(int, Appendable)} or static method
+ * {@link Doc#render(int, Doc, Appendable)}.
+ * <p>
+ * To render documents to {@link String}, see the instance method
+ * {@link Doc#render(int) render} or static method
+ * {@link Doc#render(int, Doc) render}.
  *
  * @see <a href=
  *      "https://homepages.inf.ed.ac.uk/wadler/papers/prettier/prettier.pdf">A
