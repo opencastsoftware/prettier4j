@@ -13,6 +13,9 @@ import net.jqwik.api.constraints.IntRange;
 import nl.jqno.equalsverifier.EqualsVerifier;
 import org.junit.jupiter.api.Test;
 
+import java.io.IOException;
+import java.io.StringWriter;
+import java.io.Writer;
 import java.util.Arrays;
 import java.util.Collections;
 
@@ -896,6 +899,48 @@ public class DocTest {
 
         char[] expectedChars = expected.toCharArray();
         char[] actualChars = actual.toCharArray();
+
+        assertThat(actualChars, is(equalTo(expectedChars)));
+    }
+
+    @Test
+    void testRenderToAppendable() throws IOException {
+        Doc doc = text("a");
+        Writer writer = new StringWriter();
+        doc.render(80, writer);
+        assertThat(writer.toString(), is("a"));
+    }
+
+    @Test
+    void testRenderAnsiDisabled() {
+        String expected = "(a, b)";
+        String actual = text("a").styled(Styles.blink())
+                .append(text(","))
+                .appendSpace(text("b").styled(Styles.blink()))
+                .bracket(2, Doc.lineOrEmpty(), text("("), text(")"))
+                .styled(Styles.faint())
+                .render(6, false);
+
+        char[] expectedChars = expected.toCharArray();
+        char[] actualChars = actual.toCharArray();
+
+        assertThat(actualChars, is(equalTo(expectedChars)));
+    }
+
+    @Test
+    void testRenderToAppendableAnsiDisabled() throws IOException {
+        Writer writer = new StringWriter();
+        String expected = "(a, b)";
+
+        text("a").styled(Styles.blink())
+            .append(text(","))
+            .appendSpace(text("b").styled(Styles.blink()))
+            .bracket(2, Doc.lineOrEmpty(), text("("), text(")"))
+            .styled(Styles.faint())
+            .render(6, false, writer);
+
+        char[] expectedChars = expected.toCharArray();
+        char[] actualChars = writer.toString().toCharArray();
 
         assertThat(actualChars, is(equalTo(expectedChars)));
     }

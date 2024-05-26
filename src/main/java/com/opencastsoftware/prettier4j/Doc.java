@@ -38,13 +38,13 @@ import java.util.stream.Stream;
  * {@link Doc#styled(Styles.StylesOperator...)} or static method
  * {@link Doc#styled(Doc, Styles.StylesOperator...)}.
  * <p>
- * To render documents to an {@link Appendable} output, see the instance method
- * {@link Doc#render(int, Appendable)} or static method
- * {@link Doc#render(int, Doc, Appendable)}.
+ * To render documents to an {@link java.lang.Appendable Appendable} output, see the instance method
+ * {@link Doc#render(int, boolean, Appendable)} or static method
+ * {@link Doc#render(int, boolean, Doc, Appendable)}.
  * <p>
- * To render documents to {@link String}, see the instance method
- * {@link Doc#render(int) render} or static method
- * {@link Doc#render(int, Doc) render}.
+ * To render documents to {@link java.lang.String String}, see the instance method
+ * {@link Doc#render(int, boolean) render} or static method
+ * {@link Doc#render(int, boolean, Doc) render}.
  *
  * @see <a href=
  *      "https://homepages.inf.ed.ac.uk/wadler/papers/prettier/prettier.pdf">A
@@ -247,6 +247,10 @@ public abstract class Doc {
      * Renders the current {@link com.opencastsoftware.prettier4j.Doc Doc} into a
      * {@link java.lang.String String}, aiming to lay out the document with at most
      * {@code width} characters on each line.
+     * <p>
+     * By default, ANSI escape codes are rendered to the output {@link java.lang.String String}.
+     * <p>
+     * To disable ANSI escape codes, see the {@link Doc#render(int, boolean)} overload of render.
      *
      * @param width the preferred maximum rendering width.
      * @return the document laid out as a {@link java.lang.String String}.
@@ -256,9 +260,40 @@ public abstract class Doc {
     }
 
     /**
+     * Renders the current {@link com.opencastsoftware.prettier4j.Doc Doc} into a
+     * {@link java.lang.String String}, aiming to lay out the document with at most
+     * {@code width} characters on each line.
+     *
+     * @param width the preferred maximum rendering width.
+     * @param ansi whether to render ANSI escape codes.
+     * @return the document laid out as a {@link java.lang.String String}.
+     */
+    public String render(int width, boolean ansi) {
+        return render(width, ansi, this);
+    }
+
+    /**
      * Renders the current {@link com.opencastsoftware.prettier4j.Doc Doc} into an
      * {@link java.lang.Appendable Appendable}, aiming to lay out the document with at most
      * {@code width} characters on each line.
+     *
+     * @param width the preferred maximum rendering width.
+     * @param ansi whether to render ANSI escape codes.
+     * @param output the output to render into.
+     * @throws IOException if the {@link Appendable} {@code output} throws when {@link Appendable#append(CharSequence) append}ed.
+     */
+    public void render(int width, boolean ansi, Appendable output) throws IOException {
+        render(width, ansi, this, output);
+    }
+
+    /**
+     * Renders the current {@link com.opencastsoftware.prettier4j.Doc Doc} into an
+     * {@link java.lang.Appendable Appendable}, aiming to lay out the document with at most
+     * {@code width} characters on each line.
+     * <p>
+     * By default, ANSI escape codes are rendered to the {@code output}.
+     * <p>
+     * To disable ANSI escape codes, see the {@link Doc#render(int, boolean, Appendable)} overload of render.
      *
      * @param width the preferred maximum rendering width.
      * @param output the output to render into.
@@ -755,7 +790,7 @@ public abstract class Doc {
     }
 
     /**
-     * Represents the end of scope of some ANSI text styling.
+     * Represents the end of a Doc that is {@link Doc#styled(Styles.StylesOperator...) styled} with an ANSI escape code sequence.
      */
     public static class Reset extends Doc {
         private static final Reset INSTANCE = new Reset();
@@ -1007,9 +1042,9 @@ public abstract class Doc {
      * @param right    the expanded layout.
      * @return the entries of the chosen layout.
      */
-    static Deque<Map.Entry<Integer, Doc>> chooseLayout(int width, int indent, int position, Doc left, Doc right) {
-        Deque<Map.Entry<Integer, Doc>> leftEntries = normalize(width, indent, position, left);
-        return fits(width - position, leftEntries) ? leftEntries : normalize(width, indent, position, right);
+    static Deque<Map.Entry<Integer, Doc>> chooseLayout(int width, boolean ansi, int indent, int position, Doc left, Doc right) {
+        Deque<Map.Entry<Integer, Doc>> leftEntries = normalize(width, ansi, indent, position, left);
+        return fits(width - position, leftEntries) ? leftEntries : normalize(width, ansi, indent, position, right);
     }
 
     /**
@@ -1019,12 +1054,13 @@ public abstract class Doc {
      * queue of entries to be rendered.
      *
      * @param width    the preferred maximum width for rendering.
+     * @param ansi     whether to render ANSI escape codes.
      * @param indent   the current indentation level.
      * @param position the current position in the line.
      * @param doc      the document to be rendered.
      * @return a queue of entries to be rendered.
      */
-    static Deque<Map.Entry<Integer, Doc>> normalize(int width, int indent, int position, Doc doc) {
+    static Deque<Map.Entry<Integer, Doc>> normalize(int width, boolean ansi, int indent, int position, Doc doc) {
         // Not yet normalized entries
         Deque<Map.Entry<Integer, Doc>> inQueue = new ArrayDeque<>();
 
@@ -1049,10 +1085,15 @@ public abstract class Doc {
             } else if (entryDoc instanceof Styled) {
                 // Eliminate Styled
                 Styled styledDoc = (Styled) entryDoc;
-                // Note reverse order
-                inQueue.addFirst(new SimpleEntry<>(entryIndent, Reset.getInstance()));
-                inQueue.addFirst(new SimpleEntry<>(entryIndent, styledDoc.doc()));
-                inQueue.addFirst(new SimpleEntry<>(entryIndent, new Escape(styledDoc.styles())));
+                if (ansi) {
+                    // Note reverse order
+                    inQueue.addFirst(new SimpleEntry<>(entryIndent, Reset.getInstance()));
+                    inQueue.addFirst(new SimpleEntry<>(entryIndent, styledDoc.doc()));
+                    inQueue.addFirst(new SimpleEntry<>(entryIndent, new Escape(styledDoc.styles())));
+                } else {
+                    // Ignore styles and emit the underlying Doc
+                    inQueue.addFirst(new SimpleEntry<>(entryIndent, styledDoc.doc()));
+                }
             } else if (entryDoc instanceof Indent) {
                 // Eliminate Indent
                 Indent indentDoc = (Indent) entryDoc;
@@ -1063,7 +1104,7 @@ public abstract class Doc {
                 Alternatives altDoc = (Alternatives) entryDoc;
                 // These entries are already normalized
                 Deque<Map.Entry<Integer, Doc>> chosenEntries = chooseLayout(
-                        width, entryIndent, position, altDoc.left(), altDoc.right());
+                        width, ansi, entryIndent, position, altDoc.left(), altDoc.right());
                 // Note reverse order
                 chosenEntries.descendingIterator().forEachRemaining(inQueue::addFirst);
             } else if (entryDoc instanceof Text) {
@@ -1090,6 +1131,10 @@ public abstract class Doc {
      * Renders the input {@link com.opencastsoftware.prettier4j.Doc Doc} into an
      * {@link java.lang.Appendable Appendable}, aiming to lay out the document with at most
      * {@code width} characters on each line.
+     * <p>
+     * By default, ANSI escape codes are rendered to the {@code output}.
+     * <p>
+     * To disable ANSI escape codes, see the {@link Doc#render(int, boolean, Doc, Appendable)} overload of render.
      *
      * @param width  the preferred maximum rendering width.
      * @param doc    the document to be rendered.
@@ -1097,7 +1142,22 @@ public abstract class Doc {
      * @throws IOException if the {@link Appendable} {@code output} throws when {@link Appendable#append(CharSequence) append}ed.
      */
     public static void render(int width, Doc doc, Appendable output) throws IOException {
-        Deque<Map.Entry<Integer, Doc>> renderQueue = normalize(width, 0, 0, doc);
+        render(width, true, doc, output);
+    }
+
+    /**
+     * Renders the input {@link com.opencastsoftware.prettier4j.Doc Doc} into an
+     * {@link java.lang.Appendable Appendable}, aiming to lay out the document with at most
+     * {@code width} characters on each line.
+     *
+     * @param width  the preferred maximum rendering width.
+     * @param ansi   whether to render ANSI escape codes.
+     * @param doc    the document to be rendered.
+     * @param output the output to render into.
+     * @throws IOException if the {@link Appendable} {@code output} throws when {@link Appendable#append(CharSequence) append}ed.
+     */
+    public static void render(int width, boolean ansi, Doc doc, Appendable output) throws IOException {
+        Deque<Map.Entry<Integer, Doc>> renderQueue = normalize(width, ansi, 0, 0, doc);
         AttrsStack attrsStack = new AttrsStack();
 
         for (Map.Entry<Integer, Doc> entry : renderQueue) {
@@ -1132,16 +1192,34 @@ public abstract class Doc {
      * Renders the input {@link com.opencastsoftware.prettier4j.Doc Doc} into a
      * {@link java.lang.String String}, aiming to lay out the document with at most
      * {@code width} characters on each line.
+     * <p>
+     * By default, ANSI escape codes are rendered to the output {@link java.lang.String String}.
+     * <p>
+     * To disable ANSI escape codes, see the {@link Doc#render(int, boolean, Doc)} overload of render.
      *
      * @param width  the preferred maximum rendering width.
      * @param doc    the document to be rendered.
      * @return the document laid out as a {@link java.lang.String String}.
      */
     public static String render(int width, Doc doc) {
+        return render(width, true, doc);
+    }
+
+    /**
+     * Renders the input {@link com.opencastsoftware.prettier4j.Doc Doc} into a
+     * {@link java.lang.String String}, aiming to lay out the document with at most
+     * {@code width} characters on each line.
+     *
+     * @param width  the preferred maximum rendering width.
+     * @param ansi   whether to render ANSI escape codes.
+     * @param doc    the document to be rendered.
+     * @return the document laid out as a {@link java.lang.String String}.
+     */
+    public static String render(int width, boolean ansi, Doc doc) {
         StringBuilder output = new StringBuilder();
 
         try {
-            render(width, doc, output);
+            render(width, ansi, doc, output);
         } catch (IOException ioe) {
             throw new UncheckedIOException(ioe);
         }

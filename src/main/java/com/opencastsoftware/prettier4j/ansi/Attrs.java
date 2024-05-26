@@ -148,10 +148,12 @@ public class Attrs {
     }
 
     public static ColorType fgColorType(long attrs) {
+        if (attrs == Attrs.NULL) return null;
         return colorType(attrs, FG_COLOR_TYPE_SHIFT);
     }
 
     public static ColorType bgColorType(long attrs) {
+        if (attrs == Attrs.NULL) return null;
         return colorType(attrs, BG_COLOR_TYPE_SHIFT);
     }
 
@@ -173,11 +175,13 @@ public class Attrs {
     }
 
     public static Color fgColor(long attrs) {
+        if (attrs == Attrs.NULL) return null;
         ColorType colorType = fgColorType(attrs);
         return color(attrs, colorType, FG_COLOR_SHIFT);
     }
 
     public static Color bgColor(long attrs) {
+        if (attrs == Attrs.NULL) return null;
         ColorType colorType = bgColorType(attrs);
         return color(attrs, colorType, BG_COLOR_SHIFT);
     }
