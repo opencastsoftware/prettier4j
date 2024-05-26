@@ -4,7 +4,7 @@ equalsVerifier = "3.16.1"
 gradleJavaConventions = "0.1.4"
 hamcrest = "2.2"
 jacoco = "0.8.8"
-jqwik = "1.8.4"
+jqwik = "1.8.5"
 junit = "5.10.2"
 toStringVerifier = "1.4.8"
 
