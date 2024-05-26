@@ -4,12 +4,32 @@
  */
 package com.opencastsoftware.prettier4j.ansi;
 
+import org.apiguardian.api.API;
+
+import static org.apiguardian.api.API.Status.INTERNAL;
+
+/**
+ * This interface provides static methods to produce {@link Color}s.
+ * <p>
+ * Colors from the basic 16-color terminal palette can be produced by methods such as {@link Color#red()} and {@link Color#brightGreen()}.
+ * <p>
+ * Colors from the xterm 265-color palette can be produced via {@link Color#xterm(int)}.
+ * <p>
+ * 24-bit RGB colors can be produced via {@link Color#rgb(int, int, int)}.
+ * <p>
+ * Colors can be applied to the foreground or background of a {@link com.opencastsoftware.prettier4j.Doc Doc} when {@link com.opencastsoftware.prettier4j.Doc#styled(Styles.StylesOperator...) styled}
+ * via {@link Styles#fg(Color) fg} or {@link Styles#bg(Color) bg}.
+ * <p></p>
+ * @see Styles
+ * @see <a href="https://en.wikipedia.org/wiki/ANSI_escape_code#Colors">ANSI escape code - Colors</a>
+ */
 public interface Color {
     /**
      * Produces the SGR (Select Graphic Rendition) parameters required to apply this {@link Color} as the foreground color.
      *
      * @return the SGR (Select Graphic Rendition) parameters required to apply this {@link Color} as the foreground color.
      */
+    @API(status = INTERNAL)
     int[] fgParams();
 
     /**
@@ -17,6 +37,7 @@ public interface Color {
      *
      * @return the SGR (Select Graphic Rendition) parameters required to apply this {@link Color} as the background color.
      */
+    @API(status = INTERNAL)
     int[] bgParams();
 
     /**
@@ -27,7 +48,7 @@ public interface Color {
     ColorType colorType();
 
     /**
-     * Restores the default color for a {@link com.opencastsoftware.prettier4j.Doc Doc} when {@link com.opencastsoftware.prettier4j.Doc#styled styled}
+     * Restores the default color for a {@link com.opencastsoftware.prettier4j.Doc Doc} when {@link com.opencastsoftware.prettier4j.Doc#styled(Styles.StylesOperator...) styled}
      * via {@link Styles#fg(Color) fg} or {@link Styles#bg(Color) bg}.
      *
      * @return a {@link Color} representing the default color.

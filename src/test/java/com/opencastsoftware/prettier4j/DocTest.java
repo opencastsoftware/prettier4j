@@ -5,7 +5,7 @@
 package com.opencastsoftware.prettier4j;
 
 import com.jparams.verifier.tostring.ToStringVerifier;
-import com.opencastsoftware.prettier4j.ansi.Ansi;
+import com.opencastsoftware.prettier4j.ansi.AnsiConstants;
 import com.opencastsoftware.prettier4j.ansi.Color;
 import com.opencastsoftware.prettier4j.ansi.Styles;
 import net.jqwik.api.*;
@@ -218,7 +218,7 @@ public class DocTest {
 
     @Test
     void testBoldDisplayStyle() {
-        String expected = sgrCode(1) + "a" + Ansi.RESET;
+        String expected = sgrCode(1) + "a" + AnsiConstants.RESET;
         String actual = text("a").styled(Styles.bold()).render(80);
         char[] expectedChars = expected.toCharArray();
         char[] actualChars = actual.toCharArray();
@@ -232,7 +232,7 @@ public class DocTest {
                         sgrCode(1) + 'a' +
                         sgrCode(22) + ", " +
                         sgrCode(1) + 'b' +
-                        sgrCode(22) + ')' + Ansi.RESET;
+                        sgrCode(22) + ')' + AnsiConstants.RESET;
 
         // (a, b) should fit into 6 chars ignoring ANSI escapes
         String actual = text("a").styled(Styles.bold())
@@ -250,7 +250,7 @@ public class DocTest {
 
     @Test
     void testFaintDisplayStyle() {
-        String expected = sgrCode(2) + "a" + Ansi.RESET;
+        String expected = sgrCode(2) + "a" + AnsiConstants.RESET;
         String actual = text("a").styled(Styles.faint()).render(80);
         char[] expectedChars = expected.toCharArray();
         char[] actualChars = actual.toCharArray();
@@ -264,7 +264,7 @@ public class DocTest {
                         sgrCode(2) + 'a' +
                         sgrCode(22) + ", " +
                         sgrCode(2) + 'b' +
-                        sgrCode(22) + ')' + Ansi.RESET;
+                        sgrCode(22) + ')' + AnsiConstants.RESET;
 
         String actual = text("a").styled(Styles.faint())
                 .append(text(","))
@@ -281,7 +281,7 @@ public class DocTest {
 
     @Test
     void testItalicDisplayStyle() {
-        String expected = sgrCode(3) + "a" + Ansi.RESET;
+        String expected = sgrCode(3) + "a" + AnsiConstants.RESET;
         String actual = text("a").styled(Styles.italic()).render(80);
         char[] expectedChars = expected.toCharArray();
         char[] actualChars = actual.toCharArray();
@@ -295,7 +295,7 @@ public class DocTest {
                         sgrCode(3) + 'a' +
                         sgrCode(23) + ", " +
                         sgrCode(3) + 'b' +
-                        sgrCode(23) + ')' + Ansi.RESET;
+                        sgrCode(23) + ')' + AnsiConstants.RESET;
 
         String actual = text("a").styled(Styles.italic())
                 .append(text(","))
@@ -312,7 +312,7 @@ public class DocTest {
 
     @Test
     void testUnderlineDisplayStyle() {
-        String expected = sgrCode(4) + "a" + Ansi.RESET;
+        String expected = sgrCode(4) + "a" + AnsiConstants.RESET;
         String actual = text("a").styled(Styles.underline()).render(80);
         char[] expectedChars = expected.toCharArray();
         char[] actualChars = actual.toCharArray();
@@ -326,7 +326,7 @@ public class DocTest {
                         sgrCode(4) + 'a' +
                         sgrCode(24) + ", " +
                         sgrCode(4) + 'b' +
-                        sgrCode(24) + ')' + Ansi.RESET;
+                        sgrCode(24) + ')' + AnsiConstants.RESET;
 
         String actual = text("a").styled(Styles.underline())
                 .append(text(","))
@@ -343,7 +343,7 @@ public class DocTest {
 
     @Test
     void testBlinkDisplayStyle() {
-        String expected = sgrCode(5) + "a" + Ansi.RESET;
+        String expected = sgrCode(5) + "a" + AnsiConstants.RESET;
         String actual = text("a").styled(Styles.blink()).render(80);
         char[] expectedChars = expected.toCharArray();
         char[] actualChars = actual.toCharArray();
@@ -357,7 +357,7 @@ public class DocTest {
                         sgrCode(5) + 'a' +
                         sgrCode(25) + ", " +
                         sgrCode(5) + 'b' +
-                        sgrCode(25) + ')' + Ansi.RESET;
+                        sgrCode(25) + ')' + AnsiConstants.RESET;
 
         String actual = text("a").styled(Styles.blink())
                 .append(text(","))
@@ -374,7 +374,7 @@ public class DocTest {
 
     @Test
     void testInverseDisplayStyle() {
-        String expected = sgrCode(7) + "a" + Ansi.RESET;
+        String expected = sgrCode(7) + "a" + AnsiConstants.RESET;
         String actual = text("a").styled(Styles.inverse()).render(80);
         char[] expectedChars = expected.toCharArray();
         char[] actualChars = actual.toCharArray();
@@ -388,7 +388,7 @@ public class DocTest {
                         sgrCode(7) + 'a' +
                         sgrCode(27) + ", " +
                         sgrCode(7) + 'b' +
-                        sgrCode(27) + ')' + Ansi.RESET;
+                        sgrCode(27) + ')' + AnsiConstants.RESET;
 
         String actual = text("a").styled(Styles.inverse())
                 .append(text(","))
@@ -405,7 +405,7 @@ public class DocTest {
 
     @Test
     void testStrikethroughDisplayStyle() {
-        String expected = sgrCode(9) + "a" + Ansi.RESET;
+        String expected = sgrCode(9) + "a" + AnsiConstants.RESET;
         String actual = text("a").styled(Styles.strikethrough()).render(80);
         char[] expectedChars = expected.toCharArray();
         char[] actualChars = actual.toCharArray();
@@ -419,7 +419,7 @@ public class DocTest {
                         sgrCode(9) + 'a' +
                         sgrCode(29) + ", " +
                         sgrCode(9) + 'b' +
-                        sgrCode(29) + ')' + Ansi.RESET;
+                        sgrCode(29) + ')' + AnsiConstants.RESET;
 
         String actual = text("a").styled(Styles.strikethrough())
                 .append(text(","))
@@ -450,7 +450,7 @@ public class DocTest {
                         sgrCode(39) + 'a' +
                         sgrCode(37) + ", " +
                         sgrCode(39) + 'b' +
-                        sgrCode(37) + ')' + Ansi.RESET;
+                        sgrCode(37) + ')' + AnsiConstants.RESET;
 
         String actual = text("a").styled(Styles.fg(null))
                 .append(text(","))
@@ -467,7 +467,7 @@ public class DocTest {
 
     @Test
     void test16ColorFgStyle() {
-        String expected = sgrCode(32) + "a" + Ansi.RESET;
+        String expected = sgrCode(32) + "a" + AnsiConstants.RESET;
         String actual = text("a").styled(Styles.fg(Color.green())).render(80);
         char[] expectedChars = expected.toCharArray();
         char[] actualChars = actual.toCharArray();
@@ -479,9 +479,9 @@ public class DocTest {
         String expected =
                     '(' +
                         sgrCode(32) + 'a' +
-                        Ansi.RESET + ", " +
+                        AnsiConstants.RESET + ", " +
                         sgrCode(31) + 'b' +
-                        Ansi.RESET + ')';
+                        AnsiConstants.RESET + ')';
 
         String actual = text("a").styled(Styles.fg(Color.green()))
                 .append(text(","))
@@ -502,7 +502,7 @@ public class DocTest {
                         sgrCode(32) + 'a' +
                         sgrCode(39) + ", " +
                         sgrCode(31) + 'b' +
-                        sgrCode(39) + ')' + Ansi.RESET;
+                        sgrCode(39) + ')' + AnsiConstants.RESET;
 
         String actual = text("a").styled(Styles.fg(Color.green()))
                 .append(text(","))
@@ -524,7 +524,7 @@ public class DocTest {
                         sgrCode(32) + 'a' +
                         sgrCode(37) + ", " +
                         sgrCode(31) + 'b' +
-                        sgrCode(37) + ')' + Ansi.RESET;
+                        sgrCode(37) + ')' + AnsiConstants.RESET;
 
         String actual = text("a").styled(Styles.fg(Color.green()))
                         .append(text(","))
@@ -545,7 +545,7 @@ public class DocTest {
                 sgrCode(37) + "(\n" +
                         "  " + sgrCode(32) + 'a' + sgrCode(37) + ",\n" +
                         "  " + sgrCode(31) + 'b' + sgrCode(37) + '\n' +
-                        ')' + Ansi.RESET;
+                        ')' + AnsiConstants.RESET;
 
         // expanded layout should still break over multiple lines
         String actual = text("a").styled(Styles.fg(Color.green()))
@@ -563,7 +563,7 @@ public class DocTest {
 
     @Test
     void test256ColorFgStyle() {
-        String expected = xtermFgCode(128) + "a" + Ansi.RESET;
+        String expected = xtermFgCode(128) + "a" + AnsiConstants.RESET;
         String actual = text("a").styled(Styles.fg(Color.xterm(128))).render(80);
         char[] expectedChars = expected.toCharArray();
         char[] actualChars = actual.toCharArray();
@@ -577,7 +577,7 @@ public class DocTest {
                         xtermFgCode(128) + 'a' +
                         xtermFgCode(255) + ", " +
                         xtermFgCode(37) + 'b' +
-                        xtermFgCode(255) + ')' + Ansi.RESET;
+                        xtermFgCode(255) + ')' + AnsiConstants.RESET;
 
         String actual = text("a").styled(Styles.fg(Color.xterm(128)))
                 .append(text(","))
@@ -598,7 +598,7 @@ public class DocTest {
                 xtermFgCode(255) + "(\n" +
                         "  " + xtermFgCode(128) + 'a' + xtermFgCode(255) + ",\n" +
                         "  " + xtermFgCode(37) + 'b' + xtermFgCode(255) + '\n' +
-                        ')' + Ansi.RESET;
+                        ')' + AnsiConstants.RESET;
 
         // expanded layout should still break over multiple lines
         String actual = text("a").styled(Styles.fg(Color.xterm(128)))
@@ -616,7 +616,7 @@ public class DocTest {
 
     @Test
     void testRgbColorFgStyle() {
-        String expected = rgbFgCode(220, 118, 51) + "a" + Ansi.RESET;
+        String expected = rgbFgCode(220, 118, 51) + "a" + AnsiConstants.RESET;
         String actual = text("a").styled(Styles.fg(Color.rgb(220, 118, 51))).render(80);
         char[] expectedChars = expected.toCharArray();
         char[] actualChars = actual.toCharArray();
@@ -630,7 +630,7 @@ public class DocTest {
                         rgbFgCode(220, 118, 51) + 'a' +
                         rgbFgCode(20, 143, 119) + ", " +
                         rgbFgCode(91, 44, 111) + 'b' +
-                        rgbFgCode(20, 143, 119) + ')' + Ansi.RESET;
+                        rgbFgCode(20, 143, 119) + ')' + AnsiConstants.RESET;
 
         String actual = text("a").styled(Styles.fg(Color.rgb(220, 118, 51)))
                 .append(text(","))
@@ -651,7 +651,7 @@ public class DocTest {
                 rgbFgCode(20, 143, 119) + "(\n" +
                         "  " + rgbFgCode(220, 118, 51) + 'a' + rgbFgCode(20, 143, 119) + ",\n" +
                         "  " + rgbFgCode(91, 44, 111) + 'b' + rgbFgCode(20, 143, 119) + '\n' +
-                        ')' + Ansi.RESET;
+                        ')' + AnsiConstants.RESET;
 
         // expanded layout should still break over multiple lines
         String actual = text("a").styled(Styles.fg(Color.rgb(220, 118, 51)))
@@ -683,7 +683,7 @@ public class DocTest {
                         sgrCode(49) + 'a' +
                         sgrCode(47) + ", " +
                         sgrCode(49) + 'b' +
-                        sgrCode(47) + ')' + Ansi.RESET;
+                        sgrCode(47) + ')' + AnsiConstants.RESET;
 
         String actual = text("a").styled(Styles.bg(null))
                 .append(text(","))
@@ -700,7 +700,7 @@ public class DocTest {
 
     @Test
     void test16ColorBgStyle() {
-        String expected = sgrCode(42) + "a" + Ansi.RESET;
+        String expected = sgrCode(42) + "a" + AnsiConstants.RESET;
         String actual = text("a").styled(Styles.bg(Color.green())).render(80);
         char[] expectedChars = expected.toCharArray();
         char[] actualChars = actual.toCharArray();
@@ -712,9 +712,9 @@ public class DocTest {
         String expected =
                 '(' +
                         sgrCode(42) + 'a' +
-                        Ansi.RESET + ", " +
+                        AnsiConstants.RESET + ", " +
                         sgrCode(41) + 'b' +
-                        Ansi.RESET + ')';
+                        AnsiConstants.RESET + ')';
 
         String actual = text("a").styled(Styles.bg(Color.green()))
                 .append(text(","))
@@ -735,7 +735,7 @@ public class DocTest {
                         sgrCode(42) + 'a' +
                         sgrCode(49) + ", " +
                         sgrCode(41) + 'b' +
-                        sgrCode(49) + ')' + Ansi.RESET;
+                        sgrCode(49) + ')' + AnsiConstants.RESET;
 
         String actual = text("a").styled(Styles.bg(Color.green()))
                 .append(text(","))
@@ -757,7 +757,7 @@ public class DocTest {
                         sgrCode(42) + 'a' +
                         sgrCode(47) + ", " +
                         sgrCode(41) + 'b' +
-                        sgrCode(47) + ')' + Ansi.RESET;
+                        sgrCode(47) + ')' + AnsiConstants.RESET;
 
         String actual = text("a").styled(Styles.bg(Color.green()))
                 .append(text(","))
@@ -778,7 +778,7 @@ public class DocTest {
                 sgrCode(47) + "(\n" +
                         "  " + sgrCode(42) + 'a' + sgrCode(47) + ",\n" +
                         "  " + sgrCode(41) + 'b' + sgrCode(47) + '\n' +
-                        ')' + Ansi.RESET;
+                        ')' + AnsiConstants.RESET;
 
         // expanded layout should still break over multiple lines
         String actual = text("a").styled(Styles.bg(Color.green()))
@@ -796,7 +796,7 @@ public class DocTest {
 
     @Test
     void test256ColorBgStyle() {
-        String expected = xtermBgCode(128) + "a" + Ansi.RESET;
+        String expected = xtermBgCode(128) + "a" + AnsiConstants.RESET;
         String actual = text("a").styled(Styles.bg(Color.xterm(128))).render(80);
         char[] expectedChars = expected.toCharArray();
         char[] actualChars = actual.toCharArray();
@@ -810,7 +810,7 @@ public class DocTest {
                         xtermBgCode(128) + 'a' +
                         xtermBgCode(255) + ", " +
                         xtermBgCode(37) + 'b' +
-                        xtermBgCode(255) + ')' + Ansi.RESET;
+                        xtermBgCode(255) + ')' + AnsiConstants.RESET;
 
         String actual = text("a").styled(Styles.bg(Color.xterm(128)))
                 .append(text(","))
@@ -831,7 +831,7 @@ public class DocTest {
                 xtermFgCode(255) + "(\n" +
                         "  " + xtermFgCode(128) + 'a' + xtermFgCode(255) + ",\n" +
                         "  " + xtermFgCode(37) + 'b' + xtermFgCode(255) + '\n' +
-                        ')' + Ansi.RESET;
+                        ')' + AnsiConstants.RESET;
 
         // expanded layout should still break over multiple lines
         String actual = text("a").styled(Styles.fg(Color.xterm(128)))
@@ -849,7 +849,7 @@ public class DocTest {
 
     @Test
     void testRgbColorBgStyle() {
-        String expected = rgbBgCode(220, 118, 51) + "a" + Ansi.RESET;
+        String expected = rgbBgCode(220, 118, 51) + "a" + AnsiConstants.RESET;
         String actual = text("a").styled(Styles.bg(Color.rgb(220, 118, 51))).render(80);
         char[] expectedChars = expected.toCharArray();
         char[] actualChars = actual.toCharArray();
@@ -863,7 +863,7 @@ public class DocTest {
                         rgbBgCode(220, 118, 51) + 'a' +
                         rgbBgCode(20, 143, 119) + ", " +
                         rgbBgCode(91, 44, 111) + 'b' +
-                        rgbBgCode(20, 143, 119) + ')' + Ansi.RESET;
+                        rgbBgCode(20, 143, 119) + ')' + AnsiConstants.RESET;
 
         String actual = text("a").styled(Styles.bg(Color.rgb(220, 118, 51)))
                 .append(text(","))
@@ -884,7 +884,7 @@ public class DocTest {
                 rgbFgCode(20, 143, 119) + "(\n" +
                         "  " + rgbFgCode(220, 118, 51) + 'a' + rgbFgCode(20, 143, 119) + ",\n" +
                         "  " + rgbFgCode(91, 44, 111) + 'b' + rgbFgCode(20, 143, 119) + '\n' +
-                        ')' + Ansi.RESET;
+                        ')' + AnsiConstants.RESET;
 
         // expanded layout should still break over multiple lines
         String actual = text("a").styled(Styles.fg(Color.rgb(220, 118, 51)))
@@ -1195,22 +1195,22 @@ public class DocTest {
     }
 
     String sgrCode(int code) {
-        return Ansi.CSI + code + 'm';
+        return AnsiConstants.CSI + code + 'm';
     }
 
     String xtermFgCode(int code) {
-        return Ansi.CSI + "38;5;" + code + 'm';
+        return AnsiConstants.CSI + "38;5;" + code + 'm';
     }
 
     String xtermBgCode(int code) {
-        return Ansi.CSI + "48;5;" + code + 'm';
+        return AnsiConstants.CSI + "48;5;" + code + 'm';
     }
 
     String rgbFgCode(int r, int g, int b) {
-        return Ansi.CSI + "38;2;" + r + ';' + g + ';' + b + 'm';
+        return AnsiConstants.CSI + "38;2;" + r + ';' + g + ';' + b + 'm';
     }
 
     String rgbBgCode(int r, int g, int b) {
-        return Ansi.CSI + "48;2;" + r + ';' + g + ';' + b + 'm';
+        return AnsiConstants.CSI + "48;2;" + r + ';' + g + ';' + b + 'm';
     }
 }

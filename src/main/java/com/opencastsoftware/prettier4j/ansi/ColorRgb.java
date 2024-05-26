@@ -6,7 +6,7 @@ package com.opencastsoftware.prettier4j.ansi;
 
 import java.util.Objects;
 
-public class ColorRgb implements Color {
+class ColorRgb implements Color {
     private final int red;
     private final int green;
     private final int blue;

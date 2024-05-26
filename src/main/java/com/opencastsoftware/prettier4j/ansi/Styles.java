@@ -10,6 +10,11 @@ import java.util.function.LongUnaryOperator;
 
 import static com.opencastsoftware.prettier4j.ansi.Attrs.*;
 
+/**
+ * This class provides static methods for applying ANSI text styles to a {@link com.opencastsoftware.prettier4j.Doc Doc} via {@link com.opencastsoftware.prettier4j.Doc#styled styled}.
+ * @see Color
+ * @see <a href="https://en.wikipedia.org/wiki/ANSI_escape_code#SGR_(Select_Graphic_Rendition)_parameters">Select Graphic Rendition parameters</a>
+ */
 public class Styles {
     private Styles() {}
 
@@ -113,38 +118,28 @@ public class Styles {
     static abstract class ColorStylesOperator implements StylesOperator {
         protected final Color color;
 
-        private final long colorTypeMask;
-        private final long colorTypeShift;
-
         private final long colorMask;
         private final long colorShift;
+        private final long colorTypeShift;
 
         ColorStylesOperator(
                 Color color,
-                long colorTypeMask,
-                long colorTypeShift,
                 long colorMask,
-                long colorShift) {
+                long colorShift,
+                long colorTypeShift) {
             this.color = color;
-            this.colorTypeMask = colorTypeMask;
-            this.colorTypeShift = colorTypeShift;
             this.colorMask = colorMask;
             this.colorShift = colorShift;
+            this.colorTypeShift = colorTypeShift;
         }
 
         private long withColorType(long attrs) {
-            long noColorType = attrs & colorTypeMask;
-            if (color == null) return noColorType;
             int colorTypeCode = color.colorType().code();
             long newColorType = (long) colorTypeCode << colorTypeShift;
-            return noColorType | newColorType;
+            return attrs | newColorType;
         }
 
         private long withColor(long attrs) {
-            long noColor = attrs & colorMask;
-
-            if (color == null) return noColor;
-
             long newColor = 0L;
 
             switch (color.colorType()) {
@@ -162,12 +157,14 @@ public class Styles {
                     break;
             }
 
-            return noColor | (newColor << colorShift);
+            return attrs | (newColor << colorShift);
         }
 
         @Override
         public long applyAsLong(long attrs) {
-            long withColorType = withColorType(attrs);
+            long noColorInfo = attrs & colorMask;
+            if (color == null) return noColorInfo;
+            long withColorType = withColorType(noColorInfo);
             return withColor(withColorType);
         }
 
@@ -176,24 +173,21 @@ public class Styles {
             if (this == o) return true;
             if (o == null || getClass() != o.getClass()) return false;
             ColorStylesOperator that = (ColorStylesOperator) o;
-            return colorTypeMask == that.colorTypeMask &&
-                    colorTypeShift == that.colorTypeShift &&
-                    colorMask == that.colorMask &&
-                    colorShift == that.colorShift &&
-                    Objects.equals(color, that.color);
+            return colorMask == that.colorMask &&
+                   colorShift == that.colorShift &&
+                   colorTypeShift == that.colorTypeShift &&
+                   Objects.equals(color, that.color);
         }
 
         @Override
         public int hashCode() {
-            return Objects.hash(color, colorTypeMask, colorTypeShift, colorMask, colorShift);
+            return Objects.hash(color, colorMask, colorShift, colorTypeShift);
         }
     }
 
     static class Fg extends ColorStylesOperator {
         Fg(Color color) {
-            super(color,
-                FG_COLOR_TYPE_MASK, FG_COLOR_TYPE_SHIFT,
-                FG_COLOR_MASK, FG_COLOR_SHIFT);
+            super(color, FG_COLOR_MASK, FG_COLOR_SHIFT, FG_COLOR_TYPE_SHIFT);
         }
 
         @Override
@@ -206,9 +200,7 @@ public class Styles {
 
     static class Bg extends ColorStylesOperator {
         Bg(Color color) {
-            super(color,
-                BG_COLOR_TYPE_MASK, BG_COLOR_TYPE_SHIFT,
-                BG_COLOR_MASK, BG_COLOR_SHIFT);
+            super(color, BG_COLOR_MASK, BG_COLOR_SHIFT, BG_COLOR_TYPE_SHIFT);
         }
 
         @Override

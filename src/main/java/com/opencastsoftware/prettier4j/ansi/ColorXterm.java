@@ -7,7 +7,7 @@ package com.opencastsoftware.prettier4j.ansi;
 import java.util.Objects;
 
 class ColorXterm implements Color {
-    public final int color;
+    private final int color;
 
     ColorXterm(int color) {
         this.color = color & 0xFF;

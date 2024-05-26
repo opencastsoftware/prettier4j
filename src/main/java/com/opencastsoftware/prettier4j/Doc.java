@@ -5,6 +5,7 @@
 package com.opencastsoftware.prettier4j;
 
 import com.opencastsoftware.prettier4j.ansi.Attrs;
+import com.opencastsoftware.prettier4j.ansi.AttrsStack;
 import com.opencastsoftware.prettier4j.ansi.Styles;
 
 import java.io.IOException;
@@ -1097,7 +1098,7 @@ public abstract class Doc {
      */
     public static void render(int width, Doc doc, Appendable output) throws IOException {
         Deque<Map.Entry<Integer, Doc>> renderQueue = normalize(width, 0, 0, doc);
-        Deque<Attrs> attrsStack = new ArrayDeque<>();
+        AttrsStack attrsStack = new AttrsStack();
 
         for (Map.Entry<Integer, Doc> entry : renderQueue) {
             int entryIndent = entry.getKey();
@@ -1113,16 +1114,16 @@ public abstract class Doc {
                     output.append(" ");
                 }
             } else if (entryDoc instanceof Reset) {
-                Attrs resetAttrs = attrsStack.removeFirst();
-                Attrs prevAttrs = attrsStack.peekFirst();
-                output.append(resetAttrs.transitionTo(prevAttrs));
+                long resetAttrs = attrsStack.popLast();
+                long prevAttrs = attrsStack.peekLast();
+                output.append(Attrs.transition(resetAttrs, prevAttrs));
             } else if (entryDoc instanceof Escape) {
                 Escape escapeDoc = (Escape) entryDoc;
-                Attrs prevAttrs = attrsStack.peekFirst();
-                if (prevAttrs == null) { prevAttrs = Attrs.empty(); }
-                Attrs newAttrs = prevAttrs.withStyles(escapeDoc.styles());
-                attrsStack.addFirst(newAttrs);
-                output.append(prevAttrs.transitionTo(newAttrs));
+                long prevAttrs = attrsStack.peekLast();
+                if (prevAttrs == Attrs.NULL) { prevAttrs = Attrs.EMPTY; }
+                long newAttrs = Attrs.withStyles(prevAttrs, escapeDoc.styles());
+                attrsStack.pushLast(newAttrs);
+                output.append(Attrs.transition(prevAttrs, newAttrs));
             }
         }
     }

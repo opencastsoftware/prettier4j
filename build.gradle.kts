@@ -11,12 +11,21 @@ description = "A Prettier Printer for Java"
 
 java { toolchain.languageVersion.set(JavaLanguageVersion.of(11)) }
 
-dependencies {
-    testImplementation(libs.junitJupiter)
-    testImplementation(libs.jqwik)
-    testImplementation(libs.hamcrest)
-    testImplementation(libs.equalsVerifier)
-    testImplementation(libs.toStringVerifier)
+dependencies { compileOnlyApi(libs.apiGuardian) }
+
+testing {
+    suites {
+        val test by
+            getting(JvmTestSuite::class) {
+                dependencies {
+                    implementation(libs.junitJupiter)
+                    implementation(libs.jqwik)
+                    implementation(libs.hamcrest)
+                    implementation(libs.equalsVerifier)
+                    implementation(libs.toStringVerifier)
+                }
+            }
+    }
 }
 
 mavenPublishing {

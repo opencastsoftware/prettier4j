@@ -4,11 +4,10 @@
  */
 package com.opencastsoftware.prettier4j.ansi;
 
-import com.jparams.verifier.tostring.ToStringVerifier;
 import net.jqwik.api.*;
-import nl.jqno.equalsverifier.EqualsVerifier;
 import org.junit.jupiter.api.Test;
 
+import static com.opencastsoftware.prettier4j.ansi.Attrs.*;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.*;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -17,119 +16,109 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 public class AttrsTest {
     @Test
     void emptyAttrsHasNoColorType() {
-        assertThat(Attrs.empty().fgColorType(), is(nullValue()));
-        assertThat(Attrs.empty().bgColorType(), is(nullValue()));
+        assertThat(fgColorType(Attrs.EMPTY), is(nullValue()));
+        assertThat(bgColorType(Attrs.EMPTY), is(nullValue()));
     }
 
     @Test
     void emptyAttrsHasNoColor() {
-        assertThat(Attrs.empty().fgColor(), is(nullValue()));
-        assertThat(Attrs.empty().bgColor(), is(nullValue()));
+        assertThat(fgColor(Attrs.EMPTY), is(nullValue()));
+        assertThat(bgColor(Attrs.EMPTY), is(nullValue()));
     }
 
     @Test
     void emptyAttrsIsNotBold() {
-        assertFalse(Attrs.empty().isBold(), "Empty Attrs should not be isBold");
+        assertFalse(isBold(Attrs.EMPTY), "Empty Attrs should not be isBold");
     }
 
     @Test
     void emptyAttrsIsNotFaint() {
-        assertFalse(Attrs.empty().isFaint(), "Empty Attrs should not be isFaint");
+        assertFalse(isFaint(Attrs.EMPTY), "Empty Attrs should not be isFaint");
     }
 
     @Test
     void emptyAttrsIsNotItalic() {
-        assertFalse(Attrs.empty().isItalic(), "Empty Attrs should not be isItalic");
+        assertFalse(isItalic(Attrs.EMPTY), "Empty Attrs should not be isItalic");
     }
 
     @Test
     void emptyAttrsIsNotUnderline() {
-        assertFalse(Attrs.empty().isUnderline(), "Empty Attrs should not be isUnderline");
+        assertFalse(isUnderline(Attrs.EMPTY), "Empty Attrs should not be isUnderline");
     }
 
     @Test
     void emptyAttrsIsNotBlink() {
-        assertFalse(Attrs.empty().isBlink(), "Empty Attrs should not be isBlink");
+        assertFalse(isBlink(Attrs.EMPTY), "Empty Attrs should not be isBlink");
     }
 
     @Test
     void emptyAttrsIsNotInverse() {
-        assertFalse(Attrs.empty().isInverse(), "Empty Attrs should not be isInverse");
+        assertFalse(isInverse(Attrs.EMPTY), "Empty Attrs should not be isInverse");
     }
 
     @Test
     void emptyAttrsIsNotStrikethrough() {
-        assertFalse(Attrs.empty().isStrikethrough(), "Empty Attrs should not be isStrikethrough");
+        assertFalse(isStrikethrough(Attrs.EMPTY), "Empty Attrs should not be isStrikethrough");
     }
 
     @Test
     void boldAttrsIsBold() {
-        assertTrue(Attrs.empty().withStyles(Styles.bold()).isBold(), "Bold Attrs should be isBold");
+        assertTrue(isBold(withStyles(Attrs.EMPTY, Styles.bold())), "Bold Attrs should be isBold");
     }
 
     @Test
     void faintAttrsIsFaint() {
-        assertTrue(Attrs.empty().withStyles(Styles.faint()).isFaint(), "Faint Attrs should be isFaint");
+        assertTrue(isFaint(withStyles(Attrs.EMPTY, Styles.faint())), "Faint Attrs should be isFaint");
     }
 
     @Test
     void italicAttrsIsItalic() {
-        assertTrue(Attrs.empty().withStyles(Styles.italic()).isItalic(), "Italic Attrs should be isItalic");
+        assertTrue(isItalic(withStyles(Attrs.EMPTY, Styles.italic())), "Italic Attrs should be isItalic");
     }
 
     @Test
     void underlineAttrsIsUnderline() {
-        assertTrue(Attrs.empty().withStyles(Styles.underline()).isUnderline(), "Underline Attrs should be isUnderline");
+        assertTrue(isUnderline(withStyles(Attrs.EMPTY, Styles.underline())), "Underline Attrs should be isUnderline");
     }
 
     @Test
     void blinkAttrsIsBlink() {
-        assertTrue(Attrs.empty().withStyles(Styles.blink()).isBlink(), "Blink Attrs should be isBlink");
+        assertTrue(isBlink(withStyles(Attrs.EMPTY, Styles.blink())), "Blink Attrs should be isBlink");
     }
 
     @Test
     void inverseAttrsIsInverse() {
-        assertTrue(Attrs.empty().withStyles(Styles.inverse()).isInverse(), "Inverse Attrs should be isInverse");
+        assertTrue(isInverse(withStyles(Attrs.EMPTY, Styles.inverse())), "Inverse Attrs should be isInverse");
     }
 
     @Test
     void strikethroughAttrsIsStrikethrough() {
-        assertTrue(Attrs.empty().withStyles(Styles.strikethrough()).isStrikethrough(), "Strikethrough Attrs should be isStrikethrough");
-    }
-
-    @Test
-    void testEquals() {
-        EqualsVerifier.forClass(Attrs.class).usingGetClass().verify();
-    }
-
-    @Test
-    void testToString() {
-        ToStringVerifier.forClass(Attrs.class).verify();
+        assertTrue(isStrikethrough(withStyles(Attrs.EMPTY, Styles.strikethrough())), "Strikethrough Attrs should be isStrikethrough");
     }
 
     @Property
     void attrsWithFgColorReturnsFgColor(@ForAll("colors") Color color) {
-        Attrs withColor = Attrs.empty().withStyles(Styles.fg(color));
-        assertThat(withColor.fgColorType(), is(equalTo(color.colorType())));
-        assertThat(withColor.fgColor(), is(equalTo(color)));
+        long withColor = withStyles(Attrs.EMPTY, Styles.fg(color));
+        assertThat(fgColorType(withColor), is(equalTo(color.colorType())));
+        assertThat(fgColor(withColor), is(equalTo(color)));
     }
 
     @Property
     void attrsWithBgColorReturnsBgColor(@ForAll("colors") Color color) {
-        Attrs withColor = Attrs.empty().withStyles(Styles.bg(color));
-        assertThat(withColor.bgColorType(), is(equalTo(color.colorType())));
-        assertThat(withColor.bgColor(), is(equalTo(color)));
+        long withColor = withStyles(Attrs.EMPTY, Styles.bg(color));
+        assertThat(bgColorType(withColor), is(equalTo(color.colorType())));
+        assertThat(bgColor(withColor), is(equalTo(color)));
     }
 
     @Property
     void attrsCanSetFgBgColorIndependently(@ForAll("colors") Color fgColor, @ForAll("colors") Color bgColor) {
-        Attrs withColor = Attrs.empty().withStyles(Styles.fg(fgColor), Styles.bg(bgColor));
+        long withColor = withStyles(Attrs.EMPTY, Styles.fg(fgColor), Styles.bg(bgColor));
 
-        assertThat(withColor.fgColorType(), is(equalTo(fgColor.colorType())));
-        assertThat(withColor.fgColor(), is(equalTo(fgColor)));
+        assertThat(fgColorType(withColor), is(equalTo(fgColor.colorType())));
+        assertThat(fgColor(withColor), is(equalTo(fgColor)));
 
-        assertThat(withColor.bgColorType(), is(equalTo(bgColor.colorType())));
-        assertThat(withColor.bgColor(), is(equalTo(bgColor)));
+        assertThat(bgColorType(withColor), is(equalTo(bgColor.colorType())));
+        assertThat(bgColor(withColor), is(equalTo(bgColor)));
     }
 
     @Provide

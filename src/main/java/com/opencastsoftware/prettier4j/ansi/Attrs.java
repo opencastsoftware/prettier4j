@@ -4,111 +4,134 @@
  */
 package com.opencastsoftware.prettier4j.ansi;
 
-import java.util.Objects;
+import org.apiguardian.api.API;
 
+import static org.apiguardian.api.API.Status.INTERNAL;
+
+/**
+ * This class contains utilities for operating on display attributes.
+ * <p>
+ * We use a packed representation which stores the display attribute states in a {@code long}.
+ * <p>
+ * This approach is inspired by Li Haoyi's post <a href="https://www.lihaoyi.com/post/MicrooptimizingyourScalacode.html">Micro-optimizing your Scala code</a>,
+ * which describes the techniques used in the <a href="https://github.com/com-lihaoyi/fansi">fansi</a> library to represent ANSI styled text.
+ * <p>
+ * The attributes are laid out as follows:
+ * <pre>{@code
+ * 63                47
+ *  00000000 00000000 00000000 00000000
+ *  |__||__| |________________________|
+ *  |   |    | background color
+ *  |   | foreground color type
+ *  | background coloor type
+ *
+ * 31                15
+ *  00000000 00000000 00000000 00000000
+ *  |________________________| |______|
+ *  |                          | display styles
+ *  | foreground color
+ * }</pre>
+ * <p>
+ * This layout ensures that {@link DisplayStyle}s can be treated as simple bit flags.
+ */
+@API(status = INTERNAL, consumers = {"com.opencastsoftware.prettier4j"})
 public class Attrs {
     private static final int MAX_SGR_PARAMS = 16;
 
     static final long FG_COLOR_TYPE_SHIFT = Byte.SIZE * 7;
-    static final long FG_COLOR_TYPE_MASK = 0xF0FF_FFFF_FFFF_FFFFL;
-
     static final long FG_COLOR_SHIFT = Byte.SIZE;
-    static final long FG_COLOR_MASK = 0xFFFF_FFFF_0000_00FFL;
+    static final long FG_COLOR_MASK = 0xF0FF_FFFF_0000_00FFL;
 
     static final long BG_COLOR_TYPE_SHIFT = Byte.SIZE * 7 + 4;
-    static final long BG_COLOR_TYPE_MASK = 0xFFF_FFFF_FFFF_FFFFL;
-
     static final long BG_COLOR_SHIFT = Byte.SIZE * 4;
-    static final long BG_COLOR_MASK = 0xFF00_0000_FFFF_FFFFL;
+    static final long BG_COLOR_MASK = 0x0F00_0000_FFFF_FFFFL;
 
-    private final long attrs;
+    public static final long EMPTY = 0L;
+    public static final long NULL = -1;
 
-    private static final Attrs EMPTY = new Attrs(0L);
+    private Attrs() {}
 
-    public static Attrs empty() {
-        return Attrs.EMPTY;
-    }
-
-    Attrs(long attrs) {
-        this.attrs = attrs;
-    }
-
-    public Attrs withStyles(Styles.StylesOperator ...styles) {
-        long attrs = this.attrs;
+    public static long withStyles(long attrs, Styles.StylesOperator ...styles) {
         for (Styles.StylesOperator style : styles) {
             attrs = style.applyAsLong(attrs);
         }
-        return new Attrs(attrs);
+        return attrs;
     }
 
-    public String transitionTo(Attrs next) {
-        if (next == null) {
-            return this.isEmpty() ? "" : Ansi.RESET;
+    public static String transition(long prev, long next) {
+        if (next == NULL) {
+            return isEmpty(prev) ? "" : AnsiConstants.RESET;
         }
 
         int[] sgrParams = new int[MAX_SGR_PARAMS];
         int sgrParamsCount = 0;
 
         // Bold & faint are both reset by the same SGR code
-        if ((next.isBold() || next.isFaint()) ^ (this.isBold() || this.isFaint())) {
-            if (next.isBold()) {
+        if ((isBold(next) || isFaint(next)) ^ (isBold(prev) || isFaint(prev))) {
+            if (isBold(next)) {
                 sgrParams[sgrParamsCount++] = DisplayStyle.BOLD.code();
-            } else if (next.isFaint()) {
+            } else if (isFaint(next)) {
                 sgrParams[sgrParamsCount++] = DisplayStyle.FAINT.code();
             } else {
                 sgrParams[sgrParamsCount++] = DisplayStyle.NORMAL_INTENSITY.code();
             }
         }
 
-        if (next.isItalic() ^ this.isItalic()) {
-            sgrParams[sgrParamsCount++] = next.isItalic()
+        if (isItalic(next) ^ isItalic(prev)) {
+            sgrParams[sgrParamsCount++] = isItalic(next)
                 ? DisplayStyle.ITALIC.code()
                 : DisplayStyle.ITALIC_OFF.code();
         }
 
-        if (next.isUnderline() ^ this.isUnderline()) {
-            sgrParams[sgrParamsCount++] = next.isUnderline()
+        if (isUnderline(next) ^ isUnderline(prev)) {
+            sgrParams[sgrParamsCount++] = isUnderline(next)
                 ? DisplayStyle.UNDERLINE.code()
                 : DisplayStyle.UNDERLINE_OFF.code();
         }
 
-        if (next.isBlink() ^ this.isBlink()) {
-            sgrParams[sgrParamsCount++] = next.isBlink()
+        if (isBlink(next) ^ isBlink(prev)) {
+            sgrParams[sgrParamsCount++] = isBlink(next)
                 ? DisplayStyle.BLINK.code()
                 : DisplayStyle.BLINK_OFF.code();
         }
 
-        if (next.isInverse() ^ this.isInverse()) {
-            sgrParams[sgrParamsCount++] = next.isInverse()
+        if (isInverse(next) ^ isInverse(prev)) {
+            sgrParams[sgrParamsCount++] = isInverse(next)
                 ? DisplayStyle.INVERSE.code()
                 : DisplayStyle.INVERSE_OFF.code();
         }
 
-        if (next.isStrikethrough() ^ this.isStrikethrough()) {
-            sgrParams[sgrParamsCount++] = next.isStrikethrough()
+        if (isStrikethrough(next) ^ isStrikethrough(prev)) {
+            sgrParams[sgrParamsCount++] = isStrikethrough(next)
                 ? DisplayStyle.STRIKETHROUGH.code()
                 : DisplayStyle.STRIKETHROUGH_OFF.code();
         }
 
-        if (next.fgColor() != null && !next.fgColor().equals(this.fgColor())) {
-            for (int param : next.fgColor().fgParams()) {
+        Color nextFgColor = fgColor(next);
+        Color prevFgColor = fgColor(prev);
+
+        if (nextFgColor != null && !nextFgColor.equals(prevFgColor)) {
+            for (int param : nextFgColor.fgParams()) {
                 sgrParams[sgrParamsCount++] = param;
             }
-        } else if (next.fgColor() == null && this.fgColor() != null) {
+        } else if (nextFgColor == null && prevFgColor != null) {
             sgrParams[sgrParamsCount++] = Color16.DEFAULT.fgCode();
         }
 
-        if (next.bgColor() != null && !next.bgColor().equals(this.bgColor())) {
-            for (int param : next.bgColor().bgParams()) {
+        Color nextBgColor = bgColor(next);
+        Color prevBgColor = bgColor(prev);
+
+        if (nextBgColor != null && !nextBgColor.equals(prevBgColor)) {
+            for (int param : nextBgColor.bgParams()) {
                 sgrParams[sgrParamsCount++] = param;
             }
-        } else if (next.bgColor() == null && this.bgColor() != null) {
+        } else if (nextBgColor == null && prevBgColor != null) {
             sgrParams[sgrParamsCount++] = Color16.DEFAULT.bgCode();
         }
 
         if (sgrParamsCount == 0) return "";
 
-        StringBuilder result = new StringBuilder(Ansi.CSI);
+        StringBuilder result = new StringBuilder(AnsiConstants.CSI);
 
         for (int i = 0; i < sgrParamsCount; i++) {
             if (i > 0) result.append(';');
@@ -118,21 +141,21 @@ public class Attrs {
         return result.append('m').toString();
     }
 
-    private ColorType colorType(long shiftValue) {
+    private static ColorType colorType(long attrs, long shiftValue) {
         int colorTypeCode = (int) (attrs >>> shiftValue) & 0xF;
         if (colorTypeCode == 0) return null;
         return ColorType.withCode(colorTypeCode);
     }
 
-    public ColorType fgColorType() {
-        return colorType(FG_COLOR_TYPE_SHIFT);
+    public static ColorType fgColorType(long attrs) {
+        return colorType(attrs, FG_COLOR_TYPE_SHIFT);
     }
 
-    public ColorType bgColorType() {
-        return colorType(BG_COLOR_TYPE_SHIFT);
+    public static ColorType bgColorType(long attrs) {
+        return colorType(attrs, BG_COLOR_TYPE_SHIFT);
     }
 
-    private Color color(ColorType colorType, long shiftValue) {
+    private static Color color(long attrs, ColorType colorType, long shiftValue) {
         if (colorType == null) return null;
 
         int colorBits = (int) (attrs >>> shiftValue) & 0xFFFFFF;
@@ -149,65 +172,45 @@ public class Attrs {
         return null;
     }
 
-    public Color fgColor() {
-        ColorType colorType = fgColorType();
-        return color(colorType, FG_COLOR_SHIFT);
+    public static Color fgColor(long attrs) {
+        ColorType colorType = fgColorType(attrs);
+        return color(attrs, colorType, FG_COLOR_SHIFT);
     }
 
-    public Color bgColor() {
-        ColorType colorType = bgColorType();
-        return color(colorType, BG_COLOR_SHIFT);
+    public static Color bgColor(long attrs) {
+        ColorType colorType = bgColorType(attrs);
+        return color(attrs, colorType, BG_COLOR_SHIFT);
     }
 
-    public boolean isBold() {
+    public static boolean isBold(long attrs) {
         return (attrs & 1) > 0;
     }
 
-    public boolean isFaint() {
+    public static boolean isFaint(long attrs) {
         return (attrs & (1L << 1)) > 0;
     }
 
-    public boolean isItalic() {
+    public static boolean isItalic(long attrs) {
         return (attrs & (1L << 2)) > 0;
     }
 
-    public boolean isUnderline() {
+    public static boolean isUnderline(long attrs) {
         return (attrs & (1L << 3)) > 0;
     }
 
-    public boolean isBlink() {
+    public static boolean isBlink(long attrs) {
         return (attrs & (1L << 4)) > 0;
     }
 
-    public boolean isInverse() {
+    public static boolean isInverse(long attrs) {
         return (attrs & (1L << 5)) > 0;
     }
 
-    public boolean isStrikethrough() {
+    public static boolean isStrikethrough(long attrs) {
         return (attrs & (1L << 6)) > 0;
     }
 
-    public boolean isEmpty() {
-        return this.equals(EMPTY);
-    }
-
-    @Override
-    public boolean equals(Object o) {
-        if (this == o) return true;
-        if (o == null || getClass() != o.getClass()) return false;
-        Attrs attrs1 = (Attrs) o;
-        return attrs == attrs1.attrs;
-    }
-
-    @Override
-    public int hashCode() {
-        return Objects.hashCode(attrs);
-    }
-
-    @Override
-    public String toString() {
-        return "Attrs [" +
-                "attrs=" + attrs +
-                ']';
+    public static boolean isEmpty(long attrs) {
+        return attrs == EMPTY;
     }
 }

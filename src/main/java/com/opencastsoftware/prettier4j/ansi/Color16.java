@@ -4,6 +4,7 @@
  */
 package com.opencastsoftware.prettier4j.ansi;
 
+
 enum Color16 implements Color {
     BLACK(0),
     RED(1),
