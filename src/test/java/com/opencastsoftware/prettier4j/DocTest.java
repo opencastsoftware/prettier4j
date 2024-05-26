@@ -1,15 +1,21 @@
 /*
- * SPDX-FileCopyrightText:  Copyright 2022-2023 Opencast Software Europe Ltd
+ * SPDX-FileCopyrightText:  © 2022-2024 Opencast Software Europe Ltd <https://opencastsoftware.com>
  * SPDX-License-Identifier: Apache-2.0
  */
 package com.opencastsoftware.prettier4j;
 
 import com.jparams.verifier.tostring.ToStringVerifier;
+import com.opencastsoftware.prettier4j.ansi.AnsiConstants;
+import com.opencastsoftware.prettier4j.ansi.Color;
+import com.opencastsoftware.prettier4j.ansi.Styles;
 import net.jqwik.api.*;
 import net.jqwik.api.constraints.IntRange;
 import nl.jqno.equalsverifier.EqualsVerifier;
 import org.junit.jupiter.api.Test;
 
+import java.io.IOException;
+import java.io.StringWriter;
+import java.io.Writer;
 import java.util.Arrays;
 import java.util.Collections;
 
@@ -19,7 +25,9 @@ import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.is;
 
 public class DocTest {
-    /** The example tree data structure from the original paper */
+    /**
+     * The example tree data structure from the original paper
+     */
     private Node exampleTree = new Node("aaa", Arrays.asList(
             new Node("bbbbb", Arrays.asList(
                     new Node("ccc", Collections.emptyList()),
@@ -166,8 +174,8 @@ public class DocTest {
         String actual = text("functionCall")
                 .append(
                         Doc.intersperse(
-                                Doc.text(",").append(Doc.lineOrSpace()),
-                                Arrays.asList("a", "b", "c").stream().map(Doc::text))
+                                        Doc.text(",").append(Doc.lineOrSpace()),
+                                        Arrays.asList("a", "b", "c").stream().map(Doc::text))
                                 .bracket(2, Doc.lineOrEmpty(), Doc.text("("), Doc.text(")")))
                 .render(80);
 
@@ -180,8 +188,8 @@ public class DocTest {
         String actual = text("functionCall")
                 .append(
                         Doc.intersperse(
-                                Doc.text(",").append(Doc.lineOrSpace()),
-                                Arrays.asList("a", "b", "c").stream().map(Doc::text))
+                                        Doc.text(",").append(Doc.lineOrSpace()),
+                                        Arrays.asList("a", "b", "c").stream().map(Doc::text))
                                 .bracket(2, Doc.lineOrEmpty(), "(", ")"))
                 .render(80);
 
@@ -194,8 +202,8 @@ public class DocTest {
         String actual = text("functionCall")
                 .append(
                         Doc.intersperse(
-                                Doc.text(",").append(Doc.lineOrSpace()),
-                                Arrays.asList("a", "b", "c").stream().map(Doc::text))
+                                        Doc.text(",").append(Doc.lineOrSpace()),
+                                        Arrays.asList("a", "b", "c").stream().map(Doc::text))
                                 .bracket(2, Doc.lineOrEmpty(), Doc.text("("), Doc.text(")")))
                 .render(10);
 
@@ -209,6 +217,732 @@ public class DocTest {
                 Doc.text(", "),
                 Arrays.asList(Doc.text("a"), Doc.text("b"), Doc.text("c"))).render(80);
         assertThat(actual, is(equalTo(expected)));
+    }
+
+    @Test
+    void testBoldDisplayStyle() {
+        String expected = sgrCode(1) + "a" + AnsiConstants.RESET;
+        String actual = text("a").styled(Styles.bold()).render(80);
+        char[] expectedChars = expected.toCharArray();
+        char[] actualChars = actual.toCharArray();
+        assertThat(actualChars, is(equalTo(expectedChars)));
+    }
+
+    @Test
+    void testNestedBoldStyle() {
+        String expected =
+                sgrCode(7) + '(' +
+                        sgrCode(1) + 'a' +
+                        sgrCode(22) + ", " +
+                        sgrCode(1) + 'b' +
+                        sgrCode(22) + ')' + AnsiConstants.RESET;
+
+        // (a, b) should fit into 6 chars ignoring ANSI escapes
+        String actual = text("a").styled(Styles.bold())
+                .append(text(","))
+                .appendSpace(text("b").styled(Styles.bold()))
+                .bracket(2, Doc.lineOrEmpty(), text("("), text(")"))
+                .styled(Styles.inverse())
+                .render(6);
+
+        char[] expectedChars = expected.toCharArray();
+        char[] actualChars = actual.toCharArray();
+
+        assertThat(actualChars, is(equalTo(expectedChars)));
+    }
+
+    @Test
+    void testFaintDisplayStyle() {
+        String expected = sgrCode(2) + "a" + AnsiConstants.RESET;
+        String actual = text("a").styled(Styles.faint()).render(80);
+        char[] expectedChars = expected.toCharArray();
+        char[] actualChars = actual.toCharArray();
+        assertThat(actualChars, is(equalTo(expectedChars)));
+    }
+
+    @Test
+    void testNestedFaintStyle() {
+        String expected =
+                sgrCode(9) + '(' +
+                        sgrCode(2) + 'a' +
+                        sgrCode(22) + ", " +
+                        sgrCode(2) + 'b' +
+                        sgrCode(22) + ')' + AnsiConstants.RESET;
+
+        String actual = text("a").styled(Styles.faint())
+                .append(text(","))
+                .appendSpace(text("b").styled(Styles.faint()))
+                .bracket(2, Doc.lineOrEmpty(), text("("), text(")"))
+                .styled(Styles.strikethrough())
+                .render(6);
+
+        char[] expectedChars = expected.toCharArray();
+        char[] actualChars = actual.toCharArray();
+
+        assertThat(actualChars, is(equalTo(expectedChars)));
+    }
+
+    @Test
+    void testItalicDisplayStyle() {
+        String expected = sgrCode(3) + "a" + AnsiConstants.RESET;
+        String actual = text("a").styled(Styles.italic()).render(80);
+        char[] expectedChars = expected.toCharArray();
+        char[] actualChars = actual.toCharArray();
+        assertThat(actualChars, is(equalTo(expectedChars)));
+    }
+
+    @Test
+    void testNestedItalicStyle() {
+        String expected =
+                sgrCode(1) + '(' +
+                        sgrCode(3) + 'a' +
+                        sgrCode(23) + ", " +
+                        sgrCode(3) + 'b' +
+                        sgrCode(23) + ')' + AnsiConstants.RESET;
+
+        String actual = text("a").styled(Styles.italic())
+                .append(text(","))
+                .appendSpace(text("b").styled(Styles.italic()))
+                .bracket(2, Doc.lineOrEmpty(), text("("), text(")"))
+                .styled(Styles.bold())
+                .render(6);
+
+        char[] expectedChars = expected.toCharArray();
+        char[] actualChars = actual.toCharArray();
+
+        assertThat(actualChars, is(equalTo(expectedChars)));
+    }
+
+    @Test
+    void testUnderlineDisplayStyle() {
+        String expected = sgrCode(4) + "a" + AnsiConstants.RESET;
+        String actual = text("a").styled(Styles.underline()).render(80);
+        char[] expectedChars = expected.toCharArray();
+        char[] actualChars = actual.toCharArray();
+        assertThat(actualChars, is(equalTo(expectedChars)));
+    }
+
+    @Test
+    void testNestedUnderlineStyle() {
+        String expected =
+                sgrCode(5) + '(' +
+                        sgrCode(4) + 'a' +
+                        sgrCode(24) + ", " +
+                        sgrCode(4) + 'b' +
+                        sgrCode(24) + ')' + AnsiConstants.RESET;
+
+        String actual = text("a").styled(Styles.underline())
+                .append(text(","))
+                .appendSpace(text("b").styled(Styles.underline()))
+                .bracket(2, Doc.lineOrEmpty(), text("("), text(")"))
+                .styled(Styles.blink())
+                .render(6);
+
+        char[] expectedChars = expected.toCharArray();
+        char[] actualChars = actual.toCharArray();
+
+        assertThat(actualChars, is(equalTo(expectedChars)));
+    }
+
+    @Test
+    void testBlinkDisplayStyle() {
+        String expected = sgrCode(5) + "a" + AnsiConstants.RESET;
+        String actual = text("a").styled(Styles.blink()).render(80);
+        char[] expectedChars = expected.toCharArray();
+        char[] actualChars = actual.toCharArray();
+        assertThat(actualChars, is(equalTo(expectedChars)));
+    }
+
+    @Test
+    void testNestedBlinkStyle() {
+        String expected =
+                sgrCode(2) + '(' +
+                        sgrCode(5) + 'a' +
+                        sgrCode(25) + ", " +
+                        sgrCode(5) + 'b' +
+                        sgrCode(25) + ')' + AnsiConstants.RESET;
+
+        String actual = text("a").styled(Styles.blink())
+                .append(text(","))
+                .appendSpace(text("b").styled(Styles.blink()))
+                .bracket(2, Doc.lineOrEmpty(), text("("), text(")"))
+                .styled(Styles.faint())
+                .render(6);
+
+        char[] expectedChars = expected.toCharArray();
+        char[] actualChars = actual.toCharArray();
+
+        assertThat(actualChars, is(equalTo(expectedChars)));
+    }
+
+    @Test
+    void testInverseDisplayStyle() {
+        String expected = sgrCode(7) + "a" + AnsiConstants.RESET;
+        String actual = text("a").styled(Styles.inverse()).render(80);
+        char[] expectedChars = expected.toCharArray();
+        char[] actualChars = actual.toCharArray();
+        assertThat(actualChars, is(equalTo(expectedChars)));
+    }
+
+    @Test
+    void testNestedInverseStyle() {
+        String expected =
+                sgrCode(3) + '(' +
+                        sgrCode(7) + 'a' +
+                        sgrCode(27) + ", " +
+                        sgrCode(7) + 'b' +
+                        sgrCode(27) + ')' + AnsiConstants.RESET;
+
+        String actual = text("a").styled(Styles.inverse())
+                .append(text(","))
+                .appendSpace(text("b").styled(Styles.inverse()))
+                .bracket(2, Doc.lineOrEmpty(), text("("), text(")"))
+                .styled(Styles.italic())
+                .render(6);
+
+        char[] expectedChars = expected.toCharArray();
+        char[] actualChars = actual.toCharArray();
+
+        assertThat(actualChars, is(equalTo(expectedChars)));
+    }
+
+    @Test
+    void testStrikethroughDisplayStyle() {
+        String expected = sgrCode(9) + "a" + AnsiConstants.RESET;
+        String actual = text("a").styled(Styles.strikethrough()).render(80);
+        char[] expectedChars = expected.toCharArray();
+        char[] actualChars = actual.toCharArray();
+        assertThat(actualChars, is(equalTo(expectedChars)));
+    }
+
+    @Test
+    void testNestedStrikethroughStyle() {
+        String expected =
+                sgrCode(1) + '(' +
+                        sgrCode(9) + 'a' +
+                        sgrCode(29) + ", " +
+                        sgrCode(9) + 'b' +
+                        sgrCode(29) + ')' + AnsiConstants.RESET;
+
+        String actual = text("a").styled(Styles.strikethrough())
+                .append(text(","))
+                .appendSpace(text("b").styled(Styles.strikethrough()))
+                .bracket(2, Doc.lineOrEmpty(), text("("), text(")"))
+                .styled(Styles.bold())
+                .render(6);
+
+        char[] expectedChars = expected.toCharArray();
+        char[] actualChars = actual.toCharArray();
+
+        assertThat(actualChars, is(equalTo(expectedChars)));
+    }
+
+    @Test
+    void testNullFgStyle() {
+        String expected = "a";
+        String actual = text("a").styled(Styles.fg(null)).render(80);
+        char[] expectedChars = expected.toCharArray();
+        char[] actualChars = actual.toCharArray();
+        assertThat(actualChars, is(equalTo(expectedChars)));
+    }
+
+    @Test
+    void testNestedNullFgStyle() {
+        String expected =
+                sgrCode(37) + '(' +
+                        sgrCode(39) + 'a' +
+                        sgrCode(37) + ", " +
+                        sgrCode(39) + 'b' +
+                        sgrCode(37) + ')' + AnsiConstants.RESET;
+
+        String actual = text("a").styled(Styles.fg(null))
+                .append(text(","))
+                .appendSpace(text("b").styled(Styles.fg(null)))
+                .bracket(2, Doc.lineOrEmpty(), text("("), text(")"))
+                .styled(Styles.fg(Color.white()))
+                .render(6);
+
+        char[] expectedChars = expected.toCharArray();
+        char[] actualChars = actual.toCharArray();
+
+        assertThat(actualChars, is(equalTo(expectedChars)));
+    }
+
+    @Test
+    void test16ColorFgStyle() {
+        String expected = sgrCode(32) + "a" + AnsiConstants.RESET;
+        String actual = text("a").styled(Styles.fg(Color.green())).render(80);
+        char[] expectedChars = expected.toCharArray();
+        char[] actualChars = actual.toCharArray();
+        assertThat(actualChars, is(equalTo(expectedChars)));
+    }
+
+    @Test
+    void testPartial16ColorFgStyle() {
+        String expected =
+                    '(' +
+                        sgrCode(32) + 'a' +
+                        AnsiConstants.RESET + ", " +
+                        sgrCode(31) + 'b' +
+                        AnsiConstants.RESET + ')';
+
+        String actual = text("a").styled(Styles.fg(Color.green()))
+                .append(text(","))
+                .appendSpace(text("b").styled(Styles.fg(Color.red())))
+                .bracket(2, Doc.lineOrEmpty(), text("("), text(")"))
+                .render(6);
+
+        char[] expectedChars = expected.toCharArray();
+        char[] actualChars = actual.toCharArray();
+
+        assertThat(actualChars, is(equalTo(expectedChars)));
+    }
+
+    @Test
+    void testPartial16ColorFgStyleWithDisplayStyle() {
+        String expected =
+                sgrCode(3) + '(' +
+                        sgrCode(32) + 'a' +
+                        sgrCode(39) + ", " +
+                        sgrCode(31) + 'b' +
+                        sgrCode(39) + ')' + AnsiConstants.RESET;
+
+        String actual = text("a").styled(Styles.fg(Color.green()))
+                .append(text(","))
+                .appendSpace(text("b").styled(Styles.fg(Color.red())))
+                .bracket(2, Doc.lineOrEmpty(), text("("), text(")"))
+                .styled(Styles.italic())
+                .render(6);
+
+        char[] expectedChars = expected.toCharArray();
+        char[] actualChars = actual.toCharArray();
+
+        assertThat(actualChars, is(equalTo(expectedChars)));
+    }
+
+    @Test
+    void testNested16ColorFgStyle() {
+        String expected =
+                sgrCode(37) + '(' +
+                        sgrCode(32) + 'a' +
+                        sgrCode(37) + ", " +
+                        sgrCode(31) + 'b' +
+                        sgrCode(37) + ')' + AnsiConstants.RESET;
+
+        String actual = text("a").styled(Styles.fg(Color.green()))
+                        .append(text(","))
+                        .appendSpace(text("b").styled(Styles.fg(Color.red())))
+                        .bracket(2, Doc.lineOrEmpty(), text("("), text(")"))
+                        .styled(Styles.fg(Color.white()))
+                        .render(6);
+
+        char[] expectedChars = expected.toCharArray();
+        char[] actualChars = actual.toCharArray();
+
+        assertThat(actualChars, is(equalTo(expectedChars)));
+    }
+
+    @Test
+    void testNested16ColorFgStyleFlattening() {
+        String expected =
+                sgrCode(37) + "(\n" +
+                        "  " + sgrCode(32) + 'a' + sgrCode(37) + ",\n" +
+                        "  " + sgrCode(31) + 'b' + sgrCode(37) + '\n' +
+                        ')' + AnsiConstants.RESET;
+
+        // expanded layout should still break over multiple lines
+        String actual = text("a").styled(Styles.fg(Color.green()))
+                .append(text(","))
+                .appendLineOrSpace(text("b").styled(Styles.fg(Color.red())))
+                .bracket(2, Doc.lineOrEmpty(), text("("), text(")"))
+                .styled(Styles.fg(Color.white()))
+                .render(1);
+
+        char[] expectedChars = expected.toCharArray();
+        char[] actualChars = actual.toCharArray();
+
+        assertThat(actualChars, is(equalTo(expectedChars)));
+    }
+
+    @Test
+    void test256ColorFgStyle() {
+        String expected = xtermFgCode(128) + "a" + AnsiConstants.RESET;
+        String actual = text("a").styled(Styles.fg(Color.xterm(128))).render(80);
+        char[] expectedChars = expected.toCharArray();
+        char[] actualChars = actual.toCharArray();
+        assertThat(actualChars, is(equalTo(expectedChars)));
+    }
+
+    @Test
+    void testNested256ColorFgStyle() {
+        String expected =
+                xtermFgCode(255) + '(' +
+                        xtermFgCode(128) + 'a' +
+                        xtermFgCode(255) + ", " +
+                        xtermFgCode(37) + 'b' +
+                        xtermFgCode(255) + ')' + AnsiConstants.RESET;
+
+        String actual = text("a").styled(Styles.fg(Color.xterm(128)))
+                .append(text(","))
+                .appendSpace(text("b").styled(Styles.fg(Color.xterm(37))))
+                .bracket(2, Doc.lineOrEmpty(), text("("), text(")"))
+                .styled(Styles.fg(Color.xterm(255)))
+                .render(6);
+
+        char[] expectedChars = expected.toCharArray();
+        char[] actualChars = actual.toCharArray();
+
+        assertThat(actualChars, is(equalTo(expectedChars)));
+    }
+
+    @Test
+    void testNested256ColorFgStyleFlattening() {
+        String expected =
+                xtermFgCode(255) + "(\n" +
+                        "  " + xtermFgCode(128) + 'a' + xtermFgCode(255) + ",\n" +
+                        "  " + xtermFgCode(37) + 'b' + xtermFgCode(255) + '\n' +
+                        ')' + AnsiConstants.RESET;
+
+        // expanded layout should still break over multiple lines
+        String actual = text("a").styled(Styles.fg(Color.xterm(128)))
+                .append(text(","))
+                .appendLineOrSpace(text("b").styled(Styles.fg(Color.xterm(37))))
+                .bracket(2, Doc.lineOrEmpty(), text("("), text(")"))
+                .styled(Styles.fg(Color.xterm(255)))
+                .render(1);
+
+        char[] expectedChars = expected.toCharArray();
+        char[] actualChars = actual.toCharArray();
+
+        assertThat(actualChars, is(equalTo(expectedChars)));
+    }
+
+    @Test
+    void testRgbColorFgStyle() {
+        String expected = rgbFgCode(220, 118, 51) + "a" + AnsiConstants.RESET;
+        String actual = text("a").styled(Styles.fg(Color.rgb(220, 118, 51))).render(80);
+        char[] expectedChars = expected.toCharArray();
+        char[] actualChars = actual.toCharArray();
+        assertThat(actualChars, is(equalTo(expectedChars)));
+    }
+
+    @Test
+    void testNestedRgbColorFgStyle() {
+        String expected =
+                rgbFgCode(20, 143, 119) + '(' +
+                        rgbFgCode(220, 118, 51) + 'a' +
+                        rgbFgCode(20, 143, 119) + ", " +
+                        rgbFgCode(91, 44, 111) + 'b' +
+                        rgbFgCode(20, 143, 119) + ')' + AnsiConstants.RESET;
+
+        String actual = text("a").styled(Styles.fg(Color.rgb(220, 118, 51)))
+                .append(text(","))
+                .appendSpace(text("b").styled(Styles.fg(Color.rgb(91, 44, 111))))
+                .bracket(2, Doc.lineOrEmpty(), text("("), text(")"))
+                .styled(Styles.fg(Color.rgb(20, 143, 119)))
+                .render(6);
+
+        char[] expectedChars = expected.toCharArray();
+        char[] actualChars = actual.toCharArray();
+
+        assertThat(actualChars, is(equalTo(expectedChars)));
+    }
+
+    @Test
+    void testNestedRgbColorFgStyleFlattening() {
+        String expected =
+                rgbFgCode(20, 143, 119) + "(\n" +
+                        "  " + rgbFgCode(220, 118, 51) + 'a' + rgbFgCode(20, 143, 119) + ",\n" +
+                        "  " + rgbFgCode(91, 44, 111) + 'b' + rgbFgCode(20, 143, 119) + '\n' +
+                        ')' + AnsiConstants.RESET;
+
+        // expanded layout should still break over multiple lines
+        String actual = text("a").styled(Styles.fg(Color.rgb(220, 118, 51)))
+                .append(text(","))
+                .appendLineOrSpace(text("b").styled(Styles.fg(Color.rgb(91, 44, 111))))
+                .bracket(2, Doc.lineOrEmpty(), text("("), text(")"))
+                .styled(Styles.fg(Color.rgb(20, 143, 119)))
+                .render(1);
+
+        char[] expectedChars = expected.toCharArray();
+        char[] actualChars = actual.toCharArray();
+
+        assertThat(actualChars, is(equalTo(expectedChars)));
+    }
+
+    @Test
+    void testNullBgStyle() {
+        String expected = "a";
+        String actual = text("a").styled(Styles.bg(null)).render(80);
+        char[] expectedChars = expected.toCharArray();
+        char[] actualChars = actual.toCharArray();
+        assertThat(actualChars, is(equalTo(expectedChars)));
+    }
+
+    @Test
+    void testNestedNullBgStyle() {
+        String expected =
+                sgrCode(47) + '(' +
+                        sgrCode(49) + 'a' +
+                        sgrCode(47) + ", " +
+                        sgrCode(49) + 'b' +
+                        sgrCode(47) + ')' + AnsiConstants.RESET;
+
+        String actual = text("a").styled(Styles.bg(null))
+                .append(text(","))
+                .appendSpace(text("b").styled(Styles.bg(null)))
+                .bracket(2, Doc.lineOrEmpty(), text("("), text(")"))
+                .styled(Styles.bg(Color.white()))
+                .render(6);
+
+        char[] expectedChars = expected.toCharArray();
+        char[] actualChars = actual.toCharArray();
+
+        assertThat(actualChars, is(equalTo(expectedChars)));
+    }
+
+    @Test
+    void test16ColorBgStyle() {
+        String expected = sgrCode(42) + "a" + AnsiConstants.RESET;
+        String actual = text("a").styled(Styles.bg(Color.green())).render(80);
+        char[] expectedChars = expected.toCharArray();
+        char[] actualChars = actual.toCharArray();
+        assertThat(actualChars, is(equalTo(expectedChars)));
+    }
+
+    @Test
+    void testPartial16ColorBgStyle() {
+        String expected =
+                '(' +
+                        sgrCode(42) + 'a' +
+                        AnsiConstants.RESET + ", " +
+                        sgrCode(41) + 'b' +
+                        AnsiConstants.RESET + ')';
+
+        String actual = text("a").styled(Styles.bg(Color.green()))
+                .append(text(","))
+                .appendSpace(text("b").styled(Styles.bg(Color.red())))
+                .bracket(2, Doc.lineOrEmpty(), text("("), text(")"))
+                .render(6);
+
+        char[] expectedChars = expected.toCharArray();
+        char[] actualChars = actual.toCharArray();
+
+        assertThat(actualChars, is(equalTo(expectedChars)));
+    }
+
+    @Test
+    void testPartial16ColorBgStyleWithDisplayStyle() {
+        String expected =
+                sgrCode(3) + '(' +
+                        sgrCode(42) + 'a' +
+                        sgrCode(49) + ", " +
+                        sgrCode(41) + 'b' +
+                        sgrCode(49) + ')' + AnsiConstants.RESET;
+
+        String actual = text("a").styled(Styles.bg(Color.green()))
+                .append(text(","))
+                .appendSpace(text("b").styled(Styles.bg(Color.red())))
+                .bracket(2, Doc.lineOrEmpty(), text("("), text(")"))
+                .styled(Styles.italic())
+                .render(6);
+
+        char[] expectedChars = expected.toCharArray();
+        char[] actualChars = actual.toCharArray();
+
+        assertThat(actualChars, is(equalTo(expectedChars)));
+    }
+
+    @Test
+    void testNested16ColorBgStyle() {
+        String expected =
+                sgrCode(47) + '(' +
+                        sgrCode(42) + 'a' +
+                        sgrCode(47) + ", " +
+                        sgrCode(41) + 'b' +
+                        sgrCode(47) + ')' + AnsiConstants.RESET;
+
+        String actual = text("a").styled(Styles.bg(Color.green()))
+                .append(text(","))
+                .appendSpace(text("b").styled(Styles.bg(Color.red())))
+                .bracket(2, Doc.lineOrEmpty(), text("("), text(")"))
+                .styled(Styles.bg(Color.white()))
+                .render(6);
+
+        char[] expectedChars = expected.toCharArray();
+        char[] actualChars = actual.toCharArray();
+
+        assertThat(actualChars, is(equalTo(expectedChars)));
+    }
+
+    @Test
+    void testNested16ColorBgStyleFlattening() {
+        String expected =
+                sgrCode(47) + "(\n" +
+                        "  " + sgrCode(42) + 'a' + sgrCode(47) + ",\n" +
+                        "  " + sgrCode(41) + 'b' + sgrCode(47) + '\n' +
+                        ')' + AnsiConstants.RESET;
+
+        // expanded layout should still break over multiple lines
+        String actual = text("a").styled(Styles.bg(Color.green()))
+                .append(text(","))
+                .appendLineOrSpace(text("b").styled(Styles.bg(Color.red())))
+                .bracket(2, Doc.lineOrEmpty(), text("("), text(")"))
+                .styled(Styles.bg(Color.white()))
+                .render(1);
+
+        char[] expectedChars = expected.toCharArray();
+        char[] actualChars = actual.toCharArray();
+
+        assertThat(actualChars, is(equalTo(expectedChars)));
+    }
+
+    @Test
+    void test256ColorBgStyle() {
+        String expected = xtermBgCode(128) + "a" + AnsiConstants.RESET;
+        String actual = text("a").styled(Styles.bg(Color.xterm(128))).render(80);
+        char[] expectedChars = expected.toCharArray();
+        char[] actualChars = actual.toCharArray();
+        assertThat(actualChars, is(equalTo(expectedChars)));
+    }
+
+    @Test
+    void testNested256ColorBgStyle() {
+        String expected =
+                xtermBgCode(255) + '(' +
+                        xtermBgCode(128) + 'a' +
+                        xtermBgCode(255) + ", " +
+                        xtermBgCode(37) + 'b' +
+                        xtermBgCode(255) + ')' + AnsiConstants.RESET;
+
+        String actual = text("a").styled(Styles.bg(Color.xterm(128)))
+                .append(text(","))
+                .appendSpace(text("b").styled(Styles.bg(Color.xterm(37))))
+                .bracket(2, Doc.lineOrEmpty(), text("("), text(")"))
+                .styled(Styles.bg(Color.xterm(255)))
+                .render(6);
+
+        char[] expectedChars = expected.toCharArray();
+        char[] actualChars = actual.toCharArray();
+
+        assertThat(actualChars, is(equalTo(expectedChars)));
+    }
+
+    @Test
+    void testNested256ColorBgStyleFlattening() {
+        String expected =
+                xtermFgCode(255) + "(\n" +
+                        "  " + xtermFgCode(128) + 'a' + xtermFgCode(255) + ",\n" +
+                        "  " + xtermFgCode(37) + 'b' + xtermFgCode(255) + '\n' +
+                        ')' + AnsiConstants.RESET;
+
+        // expanded layout should still break over multiple lines
+        String actual = text("a").styled(Styles.fg(Color.xterm(128)))
+                .append(text(","))
+                .appendLineOrSpace(text("b").styled(Styles.fg(Color.xterm(37))))
+                .bracket(2, Doc.lineOrEmpty(), text("("), text(")"))
+                .styled(Styles.fg(Color.xterm(255)))
+                .render(1);
+
+        char[] expectedChars = expected.toCharArray();
+        char[] actualChars = actual.toCharArray();
+
+        assertThat(actualChars, is(equalTo(expectedChars)));
+    }
+
+    @Test
+    void testRgbColorBgStyle() {
+        String expected = rgbBgCode(220, 118, 51) + "a" + AnsiConstants.RESET;
+        String actual = text("a").styled(Styles.bg(Color.rgb(220, 118, 51))).render(80);
+        char[] expectedChars = expected.toCharArray();
+        char[] actualChars = actual.toCharArray();
+        assertThat(actualChars, is(equalTo(expectedChars)));
+    }
+
+    @Test
+    void testNestedRgbColorBgStyle() {
+        String expected =
+                rgbBgCode(20, 143, 119) + '(' +
+                        rgbBgCode(220, 118, 51) + 'a' +
+                        rgbBgCode(20, 143, 119) + ", " +
+                        rgbBgCode(91, 44, 111) + 'b' +
+                        rgbBgCode(20, 143, 119) + ')' + AnsiConstants.RESET;
+
+        String actual = text("a").styled(Styles.bg(Color.rgb(220, 118, 51)))
+                .append(text(","))
+                .appendSpace(text("b").styled(Styles.bg(Color.rgb(91, 44, 111))))
+                .bracket(2, Doc.lineOrEmpty(), text("("), text(")"))
+                .styled(Styles.bg(Color.rgb(20, 143, 119)))
+                .render(6);
+
+        char[] expectedChars = expected.toCharArray();
+        char[] actualChars = actual.toCharArray();
+
+        assertThat(actualChars, is(equalTo(expectedChars)));
+    }
+
+    @Test
+    void testNestedRgbColorBgStyleFlattening() {
+        String expected =
+                rgbFgCode(20, 143, 119) + "(\n" +
+                        "  " + rgbFgCode(220, 118, 51) + 'a' + rgbFgCode(20, 143, 119) + ",\n" +
+                        "  " + rgbFgCode(91, 44, 111) + 'b' + rgbFgCode(20, 143, 119) + '\n' +
+                        ')' + AnsiConstants.RESET;
+
+        // expanded layout should still break over multiple lines
+        String actual = text("a").styled(Styles.fg(Color.rgb(220, 118, 51)))
+                .append(text(","))
+                .appendLineOrSpace(text("b").styled(Styles.fg(Color.rgb(91, 44, 111))))
+                .bracket(2, Doc.lineOrEmpty(), text("("), text(")"))
+                .styled(Styles.fg(Color.rgb(20, 143, 119)))
+                .render(1);
+
+        char[] expectedChars = expected.toCharArray();
+        char[] actualChars = actual.toCharArray();
+
+        assertThat(actualChars, is(equalTo(expectedChars)));
+    }
+
+    @Test
+    void testRenderToAppendable() throws IOException {
+        Doc doc = text("a");
+        Writer writer = new StringWriter();
+        doc.render(80, writer);
+        assertThat(writer.toString(), is("a"));
+    }
+
+    @Test
+    void testRenderAnsiDisabled() {
+        String expected = "(a, b)";
+        String actual = text("a").styled(Styles.blink())
+                .append(text(","))
+                .appendSpace(text("b").styled(Styles.blink()))
+                .bracket(2, Doc.lineOrEmpty(), text("("), text(")"))
+                .styled(Styles.faint())
+                .render(6, false);
+
+        char[] expectedChars = expected.toCharArray();
+        char[] actualChars = actual.toCharArray();
+
+        assertThat(actualChars, is(equalTo(expectedChars)));
+    }
+
+    @Test
+    void testRenderToAppendableAnsiDisabled() throws IOException {
+        Writer writer = new StringWriter();
+        String expected = "(a, b)";
+
+        text("a").styled(Styles.blink())
+            .append(text(","))
+            .appendSpace(text("b").styled(Styles.blink()))
+            .bracket(2, Doc.lineOrEmpty(), text("("), text(")"))
+            .styled(Styles.faint())
+            .render(6, false, writer);
+
+        char[] expectedChars = expected.toCharArray();
+        char[] actualChars = writer.toString().toCharArray();
+
+        assertThat(actualChars, is(equalTo(expectedChars)));
     }
 
     /**
@@ -225,7 +959,7 @@ public class DocTest {
         String expected = "a b c";
         String actual = Doc.fold(
                 Arrays.asList(Doc.text("a"), Doc.text("b"), Doc.text("c")),
-                (l, r) -> l.appendSpace(r)).render(80);
+                Doc::appendSpace).render(80);
         assertThat(actual, is(equalTo(expected)));
     }
 
@@ -243,7 +977,7 @@ public class DocTest {
         String expected = "a\nb\nc";
         String actual = Doc.fold(
                 Arrays.asList(Doc.text("a"), Doc.text("b"), Doc.text("c")),
-                (l, r) -> l.appendLine(r)).render(80);
+                Doc::appendLine).render(80);
         assertThat(actual, is(equalTo(expected)));
     }
 
@@ -449,14 +1183,14 @@ public class DocTest {
                 .findFirst().get();
 
         // EqualsVerifier doesn't work with singletons,
-        // so we can't test Line, LineOrSpace, LineOrEmpty or Empty:
+        // so we can't test Reset, Line, LineOrSpace, LineOrEmpty or Empty:
         // it requires prefab values for recursive data types and
         // those prefab values must not be equal to each other
         EqualsVerifier
                 .forClasses(
                         Text.class, Append.class,
                         Alternatives.class, Indent.class,
-                        LineOr.class)
+                        LineOr.class, Escape.class, Styled.class)
                 .usingGetClass()
                 .withPrefabValues(Doc.class, left, right)
                 .verify();
@@ -468,7 +1202,8 @@ public class DocTest {
                 .forClasses(
                         Text.class, Append.class,
                         Alternatives.class, Indent.class,
-                        LineOr.class, Empty.class)
+                        LineOr.class, Empty.class, Escape.class,
+                        Reset.class, Styled.class)
                 .withPrefabValue(Doc.class, docs().sample())
                 .verify();
 
@@ -502,5 +1237,25 @@ public class DocTest {
                 () -> docs().map(doc -> doc.bracket(2, Doc.lineOrEmpty(), Doc.text("["), Doc.text("]"))),
                 // Alternatives
                 () -> docs().map(Doc::group));
+    }
+
+    String sgrCode(int code) {
+        return AnsiConstants.CSI + code + 'm';
+    }
+
+    String xtermFgCode(int code) {
+        return AnsiConstants.CSI + "38;5;" + code + 'm';
+    }
+
+    String xtermBgCode(int code) {
+        return AnsiConstants.CSI + "48;5;" + code + 'm';
+    }
+
+    String rgbFgCode(int r, int g, int b) {
+        return AnsiConstants.CSI + "38;2;" + r + ';' + g + ';' + b + 'm';
+    }
+
+    String rgbBgCode(int r, int g, int b) {
+        return AnsiConstants.CSI + "48;2;" + r + ';' + g + ';' + b + 'm';
     }
 }

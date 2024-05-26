@@ -11,12 +11,21 @@ description = "A Prettier Printer for Java"
 
 java { toolchain.languageVersion.set(JavaLanguageVersion.of(11)) }
 
-dependencies {
-    testImplementation(libs.junitJupiter)
-    testImplementation(libs.jqwik)
-    testImplementation(libs.hamcrest)
-    testImplementation(libs.equalsVerifier)
-    testImplementation(libs.toStringVerifier)
+dependencies { compileOnlyApi(libs.apiGuardian) }
+
+testing {
+    suites {
+        val test by
+            getting(JvmTestSuite::class) {
+                dependencies {
+                    implementation(libs.junitJupiter)
+                    implementation(libs.jqwik)
+                    implementation(libs.hamcrest)
+                    implementation(libs.equalsVerifier)
+                    implementation(libs.toStringVerifier)
+                }
+            }
+    }
 }
 
 mavenPublishing {
@@ -67,6 +76,26 @@ mavenPublishing {
 tasks.withType<JavaCompile> {
     // Target Java 8
     options.release.set(8)
+}
+
+tasks.withType<Javadoc> {
+    options {
+        this as StandardJavadocDocletOptions
+        addBooleanOption("-allow-script-in-comments", true)
+        header(
+            """
+            |<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/prismjs@1/themes/prism-okaidia.min.css">
+            """
+                .trimMargin()
+        )
+        footer(
+            """
+            |<script src="https://cdn.jsdelivr.net/npm/prismjs@1/components/prism-core.min.js"></script>
+            |<script src="https://cdn.jsdelivr.net/npm/prismjs@1/plugins/autoloader/prism-autoloader.min.js"></script>
+            """
+                .trimMargin()
+        )
+    }
 }
 
 tasks.named<Test>("test") { useJUnitPlatform { includeEngines("junit-jupiter", "jqwik") } }

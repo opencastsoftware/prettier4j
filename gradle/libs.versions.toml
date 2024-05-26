@@ -1,4 +1,5 @@
 [versions]
+apiGuardian = "1.1.2"
 equalsVerifier = "3.16.1"
 gradleJavaConventions = "0.1.4"
 hamcrest = "2.2"
@@ -8,6 +9,7 @@ junit = "5.10.2"
 toStringVerifier = "1.4.8"
 
 [libraries]
+apiGuardian = { module = "org.apiguardian:apiguardian-api", version.ref = "apiGuardian" }
 equalsVerifier = { module = "nl.jqno.equalsverifier:equalsverifier", version.ref = "equalsVerifier" }
 hamcrest = { module = "org.hamcrest:hamcrest", version.ref = "hamcrest" }
 jqwik = { module = "net.jqwik:jqwik", version.ref = "jqwik" }
