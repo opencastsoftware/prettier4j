@@ -16,7 +16,7 @@ This algorithm is particularly suitable for formatting source code (see for exam
 
 Gradle (build.gradle / build.gradle.kts):
 ```groovy
-implementation("com.opencastsoftware:prettier4j:0.2.0")
+implementation("com.opencastsoftware:prettier4j:0.3.0")
 ```
 
 Maven (pom.xml):
@@ -24,7 +24,7 @@ Maven (pom.xml):
 <dependency>
     <groupId>com.opencastsoftware</groupId>
     <artifactId>prettier4j</artifactId>
-    <version>0.2.0</version>
+    <version>0.3.0</version>
 </dependency>
 ```
 
@@ -110,6 +110,53 @@ This enables text styles like foreground and background colours, underlines and 
 To do this, the [styled(Styles.StylesOperator...)](https://www.javadoc.io/static/com.opencastsoftware/prettier4j/0.2.0/com/opencastsoftware/prettier4j/Doc.html#styled(com.opencastsoftware.prettier4j.ansi.Styles.StylesOperator...)) method of the `Doc` class can be used.
 
 The styles that can be applied can be found in the [Styles](https://www.javadoc.io/static/com.opencastsoftware/prettier4j/0.2.0/com/opencastsoftware/prettier4j/ansi/Styles.html) class.
+
+For example:
+
+```java
+Doc.text("one").styled(Style.fg(Color.red()))
+    .appendLineOrSpace(Doc.text("two").styled(Style.fg(Color.green())))
+    .appendLineOrSpace(Doc.text("three").styled(Style.fg(Color.blue())))
+    .render(30);
+
+// ===> "\u001b[31mone\u001b[0m \u001b[32mtwo\u001b[0m \u001b[34mthree\u001b[0m"
+```
+
+### Parameterized documents
+
+As of version 0.3.0, there is support for declaring parameters in documents.
+
+Parameters are named, and a named parameter may appear multiple times in the same document.
+
+All parameters *must* be bound to a `Doc` value before rendering.
+
+Binding parameters is exactly equivalent to inlining the argument values into the original document.
+
+For example:
+
+```java
+Doc.param("one")
+    .appendLineOrSpace(Doc.param("two"))
+    .appendLineOrSpace(Doc.param("three"))
+    .bind(
+        "one", Doc.text("1"),
+        "two", Doc.text("2"),
+        "three", Doc.text("3"))
+    .render(30);
+
+// ===> "1 2 3"
+```
+
+is exactly equivalent to:
+
+```java
+Doc.text("1")
+    .appendLineOrSpace(Doc.text("2"))
+    .appendLineOrSpace(Doc.text("3"))
+    .render(30);
+
+// ===> "1 2 3"
+```
 
 ## Acknowlegements
 
