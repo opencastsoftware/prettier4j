@@ -18,11 +18,12 @@ import java.io.StringWriter;
 import java.io.Writer;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.function.UnaryOperator;
 
 import static com.opencastsoftware.prettier4j.Doc.*;
 import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.equalTo;
-import static org.hamcrest.Matchers.is;
+import static org.hamcrest.Matchers.*;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 public class DocTest {
     /**
@@ -912,14 +913,28 @@ public class DocTest {
     }
 
     @Test
+    void testRenderToAppendableDefaultOptions() throws IOException {
+        Doc doc = text("a");
+        Writer writer = new StringWriter();
+        doc.render(writer);
+        assertThat(writer.toString(), is("a"));
+    }
+
+    @Test
     void testRenderAnsiDisabled() {
+        RenderOptions options = RenderOptions.builder()
+                .lineWidth(6)
+                .emitAnsiEscapes(false)
+                .build();
+
         String expected = "(a, b)";
+
         String actual = text("a").styled(Styles.blink())
                 .append(text(","))
                 .appendSpace(text("b").styled(Styles.blink()))
                 .bracket(2, Doc.lineOrEmpty(), text("("), text(")"))
                 .styled(Styles.faint())
-                .render(6, false);
+                .render(options);
 
         char[] expectedChars = expected.toCharArray();
         char[] actualChars = actual.toCharArray();
@@ -930,6 +945,12 @@ public class DocTest {
     @Test
     void testRenderToAppendableAnsiDisabled() throws IOException {
         Writer writer = new StringWriter();
+
+        RenderOptions options = RenderOptions.builder()
+                .lineWidth(6)
+                .emitAnsiEscapes(false)
+                .build();
+
         String expected = "(a, b)";
 
         text("a").styled(Styles.blink())
@@ -937,12 +958,82 @@ public class DocTest {
             .appendSpace(text("b").styled(Styles.blink()))
             .bracket(2, Doc.lineOrEmpty(), text("("), text(")"))
             .styled(Styles.faint())
-            .render(6, false, writer);
+            .render(options, writer);
 
         char[] expectedChars = expected.toCharArray();
         char[] actualChars = writer.toString().toCharArray();
 
         assertThat(actualChars, is(equalTo(expectedChars)));
+    }
+
+    @Test
+    void testRenderWithUnboundParam() {
+        Doc unbound = Doc.param("a");
+        assertThrows(IllegalStateException.class, unbound::render);
+    }
+
+    @Test
+    void testRenderWithParamBoundToItself() {
+        Doc unbound = Doc.param("a");
+        Doc bound = unbound.bind("a", unbound);
+        assertThrows(IllegalStateException.class, bound::render);
+    }
+
+    @Test
+    void testRenderWithMultipleParams() {
+        Doc unbound = param("a")
+                .append(text(","))
+                .appendLineOrSpace(param("b"))
+                .bracket(2, lineOrEmpty(), text("("), text(")"));
+
+        String rendered = unbound.bind(
+                        "a", text("1"),
+                        "b", text("2"))
+                .render(80);
+
+        assertThat(rendered, is(equalTo("(1, 2)")));
+    }
+
+    @Test
+    void testRenderWithOddParams() {
+        Doc unbound = param("a")
+                .append(text(","))
+                .appendLineOrSpace(param("b"))
+                .bracket(2, lineOrEmpty(), text("("), text(")"));
+
+        assertThrows(IllegalArgumentException.class, () -> {
+            unbound.bind(
+                    "a", text("1"),
+                    "b");
+        });
+    }
+
+    @Test
+    void testRenderWithIllTypedParamKey() {
+        Doc unbound = param("a")
+                .append(text(","))
+                .appendLineOrSpace(param("b"))
+                .bracket(2, lineOrEmpty(), text("("), text(")"));
+
+        assertThrows(IllegalArgumentException.class, () -> {
+            unbound.bind(
+                    "a", text("1"),
+                    1, text("2"));
+        });
+    }
+
+    @Test
+    void testRenderWithIllTypedParamValue() {
+        Doc unbound = param("a")
+                .append(text(","))
+                .appendLineOrSpace(param("b"))
+                .bracket(2, lineOrEmpty(), text("("), text(")"));
+
+        assertThrows(IllegalArgumentException.class, () -> {
+            unbound.bind(
+                    "a", text("1"),
+                    "b", "2");
+        });
     }
 
     /**
@@ -1016,8 +1107,8 @@ public class DocTest {
     @Property
     void leftUnitLaw(
             @ForAll @IntRange(min = 5, max = 200) int width,
-            @ForAll("docs") Doc doc) {
-        String appended = doc.append(empty()).render(width);
+            @ForAll("noParamDocs") Doc doc) {
+        String appended = doc.append(Doc.empty()).render(width);
         String original = doc.render(width);
         assertThat(appended, is(equalTo(original)));
     }
@@ -1033,8 +1124,8 @@ public class DocTest {
     @Property
     void rightUnitLaw(
             @ForAll @IntRange(min = 5, max = 200) int width,
-            @ForAll("docs") Doc doc) {
-        String appended = empty().append(doc).render(width);
+            @ForAll("noParamDocs") Doc doc) {
+        String appended = Doc.empty().append(doc).render(width);
         String original = doc.render(width);
         assertThat(appended, is(equalTo(original)));
     }
@@ -1050,9 +1141,9 @@ public class DocTest {
     @Property
     void associativityLaw(
             @ForAll @IntRange(min = 5, max = 200) int width,
-            @ForAll("docs") Doc x,
-            @ForAll("docs") Doc y,
-            @ForAll("docs") Doc z) {
+            @ForAll("noParamDocs") Doc x,
+            @ForAll("noParamDocs") Doc y,
+            @ForAll("noParamDocs") Doc z) {
         String leftAssociated = x.append(y).append(z).render(width);
         String rightAssociated = x.append(y.append(z)).render(width);
         assertThat(leftAssociated, is(equalTo(rightAssociated)));
@@ -1085,7 +1176,7 @@ public class DocTest {
     @Property
     void emptyEquivalentToEmptyText(@ForAll @IntRange(min = 5, max = 200) int width) {
         String emptyText = text("").render(width);
-        String emptyDoc = empty().render(width);
+        String emptyDoc = Doc.empty().render(width);
         assertThat(emptyText, is(equalTo(emptyDoc)));
     }
 
@@ -1101,7 +1192,7 @@ public class DocTest {
             @ForAll @IntRange(min = 5, max = 200) int width,
             @ForAll @IntRange(min = 0, max = 200) int i,
             @ForAll @IntRange(min = 0, max = 200) int j,
-            @ForAll("docs") Doc doc) {
+            @ForAll("noParamDocs") Doc doc) {
         String sumIndent = doc.indent(i + j).render(width);
         String nestedIndent = doc.indent(j).indent(i).render(width);
         assertThat(sumIndent, is(equalTo(nestedIndent)));
@@ -1117,7 +1208,7 @@ public class DocTest {
     @Property
     void indentZeroEquivalentToNoIndent(
             @ForAll @IntRange(min = 5, max = 200) int width,
-            @ForAll("docs") Doc doc) {
+            @ForAll("noParamDocs") Doc doc) {
         String zeroIndent = doc.indent(0).render(width);
         String noIndent = doc.render(width);
         assertThat(zeroIndent, is(equalTo(noIndent)));
@@ -1134,8 +1225,8 @@ public class DocTest {
     void indentDistributesOverAppend(
             @ForAll @IntRange(min = 5, max = 200) int width,
             @ForAll @IntRange(min = 0, max = 200) int indent,
-            @ForAll("docs") Doc left,
-            @ForAll("docs") Doc right) {
+            @ForAll("noParamDocs") Doc left,
+            @ForAll("noParamDocs") Doc right) {
         String indentedAppend = left.append(right).indent(indent).render(width);
         String appendedIndents = left.indent(indent).append(right.indent(indent)).render(width);
         assertThat(indentedAppend, is(equalTo(appendedIndents)));
@@ -1152,8 +1243,8 @@ public class DocTest {
     void emptyUnaffectedByIndent(
             @ForAll @IntRange(min = 5, max = 200) int width,
             @ForAll @IntRange(min = 0, max = 200) int indent) {
-        String indentedEmpty = empty().indent(indent).render(width);
-        String noIndentEmpty = empty().render(width);
+        String indentedEmpty = Doc.empty().indent(indent).render(width);
+        String noIndentEmpty = Doc.empty().render(width);
         assertThat(indentedEmpty, is(equalTo(noIndentEmpty)));
     }
 
@@ -1174,6 +1265,118 @@ public class DocTest {
         assertThat(topLevelIndent, is(equalTo(noIndent)));
     }
 
+    @Property
+    void paramHasParams(@ForAll String paramName) {
+        Doc boundDoc = Doc.param(paramName);
+        assertThat(boundDoc.hasParams(), is(true));
+    }
+
+    @Property
+    void paramBindingEliminatesParam(
+            @ForAll String paramName,
+            @ForAll("noParamDocs") Doc argDoc
+    ) {
+        Doc boundDoc = Doc.param(paramName)
+                .bind(paramName, argDoc);
+        assertThat(boundDoc.hasParams(), is(false));
+    }
+
+    @Property
+    void paramBindingWrongNameDoesNothing(
+            @ForAll String paramName,
+            @ForAll String unrelatedName,
+            @ForAll("noParamDocs") Doc argDoc
+    ) {
+        Assume.that(!paramName.equals(unrelatedName));
+
+        Doc paramDoc = Doc.param(paramName);
+
+        Doc boundDoc = paramDoc.bind(unrelatedName, argDoc);
+
+        assertThat(boundDoc, is(sameInstance(paramDoc)));
+
+        assertThat(boundDoc.hasParams(), is(true));
+    }
+
+    @Property
+    void paramBindingWrongNameMapDoesNothing(
+            @ForAll String paramName,
+            @ForAll String unrelatedName1,
+            @ForAll String unrelatedName2,
+            @ForAll("noParamDocs") Doc argDoc
+    ) {
+        Assume.that(!paramName.equals(unrelatedName1));
+        Assume.that(!paramName.equals(unrelatedName2));
+        Assume.that(!unrelatedName1.equals(unrelatedName2));
+
+        Doc paramDoc = Doc.param(paramName);
+
+        Doc boundDoc = paramDoc.bind(
+                unrelatedName1, argDoc,
+                unrelatedName2, argDoc);
+
+        assertThat(boundDoc, is(sameInstance(paramDoc)));
+
+        assertThat(boundDoc.hasParams(), is(true));
+    }
+
+    @Property
+    void bindingTopLevelParamEquivalentToArgDoc(
+            @ForAll @IntRange(min = 5, max = 200) int width,
+            @ForAll String paramName,
+            @ForAll("noParamDocs") Doc argDoc
+    ) {
+        String renderedArg = argDoc.render(width);
+
+        String boundParam = Doc.param(paramName)
+                .bind(paramName, argDoc)
+                .render(width);
+
+        assertThat(boundParam, is(equalTo(renderedArg)));
+    }
+
+    @Property
+    void bindingTopLevelParamWithStringEquivalentToText(
+            @ForAll @IntRange(min = 5, max = 200) int width,
+            @ForAll String paramName,
+            @ForAll String paramValue
+    ) {
+        String renderedText = Doc.text(paramValue).render(width);
+
+        String boundParam = Doc.param(paramName)
+                .bind(paramName, paramValue)
+                .render(width);
+
+        assertThat(boundParam, is(equalTo(renderedText)));
+    }
+
+    @Property
+    void bindingDocWithoutParamsDoesNothing(
+            @ForAll("noParamDocs") Doc doc,
+            @ForAll String paramName,
+            @ForAll("noParamDocs") Doc argDoc
+    ) {
+        Doc boundDoc = doc.bind(paramName, argDoc);
+        assertThat(boundDoc, is(equalTo(doc)));
+    }
+
+    @Property
+    void paramIsEquivalentToInlining(
+            @ForAll @IntRange(min = 5, max = 200) int width,
+            @ForAll("unaryDocs") UnaryOperator<Doc> unaryDoc,
+            @ForAll String paramName,
+            @ForAll("noParamDocs") Doc argDoc
+    ) {
+        String inlined = unaryDoc.apply(argDoc).render(width);
+
+        String parameterized = unaryDoc
+                .apply(param(paramName))
+                .bind(paramName, argDoc)
+                .render(width);
+
+        assertThat(parameterized, is(equalTo(inlined)));
+    }
+
     @Test
     void testEquals() {
         Doc left = docs().sample();
@@ -1188,7 +1391,7 @@ public class DocTest {
         // those prefab values must not be equal to each other
         EqualsVerifier
                 .forClasses(
-                        Text.class, Append.class,
+                        Text.class, Append.class, Param.class,
                         Alternatives.class, Indent.class,
                         LineOr.class, Escape.class, Styled.class)
                 .usingGetClass()
@@ -1203,7 +1406,7 @@ public class DocTest {
                         Text.class, Append.class,
                         Alternatives.class, Indent.class,
                         LineOr.class, Empty.class, Escape.class,
-                        Reset.class, Styled.class)
+                        Reset.class, Styled.class, Param.class)
                 .withPrefabValue(Doc.class, docs().sample())
                 .verify();
 
@@ -1211,6 +1414,74 @@ public class DocTest {
                 .forClasses(Line.class, LineOrSpace.class, LineOrEmpty.class)
                 .withIgnoredFields("altDoc")
                 .verify();
+    }
+
+    @Provide
+    Arbitrary<Doc> paramDocs() {
+        return docs().filter(Doc::hasParams);
+    }
+
+    @Provide
+    Arbitrary<Doc> noParamDocs() {
+        return docs().filter(doc -> !doc.hasParams());
+    }
+
+    @Provide
+    Arbitrary<UnaryOperator<Doc>> unaryDocs() {
+        return Arbitraries.lazyOf(
+            () -> Arbitraries.of(Doc::group),
+            () -> Arbitraries.of(Doc::lineOr),
+            () -> Arbitraries.of(doc -> doc.indent(2)),
+            () -> Arbitraries.of(doc -> doc.bracket(2, lineOrEmpty(), text("["), text("]"))),
+            () -> noParamDocs().map(doc1 -> doc1::append),
+            () -> noParamDocs().map(doc1 -> doc2 -> doc2.append(doc1)),
+            () -> unaryDocs().tuple2().map(tuple -> doc -> tuple.get1().andThen(tuple.get2()).apply(doc))
+        );
+    }
+
+    @Provide
+    Arbitrary<Styles.StylesOperator> styles() {
+        return Arbitraries.lazyOf(
+            () -> colors().map(Styles::fg),
+            () -> colors().map(Styles::bg),
+            () -> Arbitraries.of(Styles.bold()),
+            () -> Arbitraries.of(Styles.faint()),
+            () -> Arbitraries.of(Styles.italic()),
+            () -> Arbitraries.of(Styles.underline()),
+            () -> Arbitraries.of(Styles.blink()),
+            () -> Arbitraries.of(Styles.inverse()),
+            () -> Arbitraries.of(Styles.strikethrough())
+        );
+    }
+
+    @Provide
+    Arbitrary<Color> colors() {
+        return Arbitraries.oneOf(
+                Arbitraries.create(Color::none),
+                Arbitraries.create(Color::black),
+                Arbitraries.create(Color::red),
+                Arbitraries.create(Color::green),
+                Arbitraries.create(Color::yellow),
+                Arbitraries.create(Color::blue),
+                Arbitraries.create(Color::magenta),
+                Arbitraries.create(Color::cyan),
+                Arbitraries.create(Color::white),
+
+                Arbitraries.create(Color::brightBlack),
+                Arbitraries.create(Color::brightRed),
+                Arbitraries.create(Color::brightGreen),
+                Arbitraries.create(Color::brightYellow),
+                Arbitraries.create(Color::brightBlue),
+                Arbitraries.create(Color::brightMagenta),
+                Arbitraries.create(Color::brightCyan),
+                Arbitraries.create(Color::brightWhite),
+
+                Arbitraries.integers().between(0, 255)
+                        .map(Color::xterm),
+
+                Arbitraries.integers().between(0, 255)
+                        .tuple3().map(t -> Color.rgb(t.get1(), t.get2(), t.get3()))
+        );
     }
 
     @Provide
@@ -1236,7 +1507,14 @@ public class DocTest {
                 // Bracketing
                 () -> docs().map(doc -> doc.bracket(2, Doc.lineOrEmpty(), Doc.text("["), Doc.text("]"))),
                 // Alternatives
-                () -> docs().map(Doc::group));
+                () -> docs().map(Doc::group),
+                // Param
+                () -> Arbitraries.strings().map(Doc::param),
+                // Styled
+                () -> styles().array(Styles.StylesOperator[].class).flatMap(styles -> {
+                    return docs().map(doc -> doc.styled(styles));
+                })
+        );
     }
 
     String sgrCode(int code) {

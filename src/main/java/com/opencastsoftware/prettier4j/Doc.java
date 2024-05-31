@@ -19,63 +19,128 @@ import java.util.stream.Stream;
  * Implements the algorithm described in Philip Wadler's "A prettier printer", a
  * pretty printing algorithm for laying out hierarchical documents as text.
  * <p>
- * To construct a document, see the static methods of
- * {@link com.opencastsoftware.prettier4j.Doc Doc}, especially
- * {@link com.opencastsoftware.prettier4j.Doc#text(String) text},
- * {@link com.opencastsoftware.prettier4j.Doc#empty() empty},
- * {@link com.opencastsoftware.prettier4j.Doc#line() line} and its related
- * methods.
+ * To construct a document, see the static methods of {@link Doc}, especially
+ * {@link Doc#text(String) text}, {@link Doc#empty() empty}, {@link Doc#line() line}
+ * and its related methods.
  * <p>
- * To concatenate documents, see
- * {@link com.opencastsoftware.prettier4j.Doc#append(Doc) append} and its
- * related instance methods.
+ * To concatenate documents, see {@link Doc#append(Doc) append} and its related
+ * instance methods.
  * <p>
  * To declare groups of content which should be collapsed onto one line if
- * possible, see the static method
- * {@link com.opencastsoftware.prettier4j.Doc#group(Doc) group}.
+ * possible, see the static method {@link Doc#group(Doc) group}.
  * <p>
  * To style a {@link Doc} with ANSI escape codes, see the instance method
  * {@link Doc#styled(Styles.StylesOperator...)} or static method
  * {@link Doc#styled(Doc, Styles.StylesOperator...)}.
  * <p>
- * To render documents to an {@link java.lang.Appendable Appendable} output, see the instance method
- * {@link Doc#render(int, boolean, Appendable)} or static method
- * {@link Doc#render(int, boolean, Doc, Appendable)}.
+ * To render documents to an {@link Appendable} output, see the instance method
+ * {@link Doc#render(RenderOptions, Appendable)} or static method
+ * {@link Doc#render(Doc, RenderOptions, Appendable)}.
  * <p>
- * To render documents to {@link java.lang.String String}, see the instance method
- * {@link Doc#render(int, boolean) render} or static method
- * {@link Doc#render(int, boolean, Doc) render}.
+ * To render documents to {@link String}, see the instance method
+ * {@link Doc#render(RenderOptions)} or static method
+ * {@link Doc#render(Doc, RenderOptions)}.
  *
- * @see <a href=
- *      "https://homepages.inf.ed.ac.uk/wadler/papers/prettier/prettier.pdf">A
- *      prettier printer</a>
+ * @see <a href="https://web.archive.org/web/20240429003710/https://homepages.inf.ed.ac.uk/wadler/papers/prettier/prettier.pdf">
+ *     A prettier printer
+ *     </a>
  */
 public abstract class Doc {
+    private Doc() {}
+
     /**
-     * Returns a flattened layout for the current
-     * {@link com.opencastsoftware.prettier4j.Doc Doc}.
+     * Returns a flattened layout for the current {@link Doc}.
      *
      * @return the flattened document.
      */
     abstract Doc flatten();
 
     /**
-     * Append the {@code other} {@link com.opencastsoftware.prettier4j.Doc Doc} to
-     * this one.
+     * Indicate whether the current {@link Doc}
+     * contains any parameters.
+     *
+     * @return whether this {@link Doc} contains any parameters.
+     */
+    abstract boolean hasParams();
+
+    /**
+     * Bind a named parameter to the {@link Doc} provided via {@code value}.
+     *
+     * @param name  the name of the parameter.
+     * @param value the value to use to replace the parameter placeholder.
+     * @return this {@link Doc} with all instances of the named parameter replaced by {@code value}.
+     */
+    public abstract Doc bind(String name, Doc value);
+
+    /**
+     * Bind named parameters to the {@link Doc}s provided via {@code bindings}.
+     *
+     * @param bindings the bindings to use to replace named parameters.
+     * @return this {@link Doc} with all matching named parameters replaced by their corresponding values.
+     */
+    public abstract Doc bind(Map<String, Doc> bindings);
+
+    /**
+     * Bind named parameters to the name-to-{@link Doc} pairs provided via {@code bindings}.
+     *
+     * @param bindings the bindings to use to replace named parameters.
+     * @return this {@link Doc} with all matching named parameters replaced by their corresponding values.
+     */
+    public Doc bind(Object... bindings) {
+        if (bindings.length % 2 != 0) {
+           throw new IllegalArgumentException(
+                   "String-to-Doc pairs of arguments must be provided, but " +
+                           bindings.length + " arguments were found.");
+        }
+
+        Map<String, Doc> bindingsMap = new HashMap<>();
+
+        for (int i = 0; i < bindings.length; i += 2) {
+            if (!(bindings[i] instanceof String)) {
+                throw new IllegalArgumentException(
+                        "Key type must be String, but was " +
+                                bindings[i].getClass().getSimpleName() +
+                                " at index " + i + '.');
+            }
+            if (!(bindings[i + 1] instanceof Doc)) {
+                throw new IllegalArgumentException(
+                        "Value type must be Doc, but was " +
+                                bindings[i + 1].getClass().getSimpleName() +
+                                " at index" + (i + 1) + '.');
+            }
+
+            bindingsMap.put(
+                    (String) bindings[i],
+                    (Doc) bindings[i + 1]);
+        }
+
+        return bind(bindingsMap);
+    }
+
+    /**
+     * Bind a named parameter to the {@link String} provided via {@code value}.
+     *
+     * @return this {@link Doc} with all instances of the named parameter replaced by {@code value}.
+     */
+    public Doc bind(String name, String value) {
+        return bind(name, Doc.text(value));
+    }
+
+    /**
+     * Append the {@code other} {@link Doc} to this one.
      *
      * @param other the other document.
-     * @return the concatenated {@link com.opencastsoftware.prettier4j.Doc Doc}.
+     * @return the concatenated {@link Doc}.
      */
     public Doc append(Doc other) {
         return new Append(this, other);
     }
 
     /**
-     * Append the {@code other} {@link com.opencastsoftware.prettier4j.Doc Doc} to
-     * this one, separated by a space character.
+     * Append the {@code other} {@link Doc} to this one, separated by a space character.
      *
      * @param other the other document.
-     * @return the concatenated {@link com.opencastsoftware.prettier4j.Doc Doc}.
+     * @return the concatenated {@link Doc}.
      */
     public Doc appendSpace(Doc other) {
         return this
@@ -84,11 +149,11 @@ public abstract class Doc {
     }
 
     /**
-     * Append the {@code other} {@link com.opencastsoftware.prettier4j.Doc Doc} to
-     * this one, separated by a line break which cannot be flattened.
+     * Append the {@code other} {@link Doc} to this one,
+     * separated by a line break which cannot be flattened.
      *
      * @param other the other document.
-     * @return the concatenated {@link com.opencastsoftware.prettier4j.Doc Doc}.
+     * @return the concatenated {@link Doc}.
      */
     public Doc appendLine(Doc other) {
         return this
@@ -97,12 +162,11 @@ public abstract class Doc {
     }
 
     /**
-     * Append the {@code other} {@link com.opencastsoftware.prettier4j.Doc Doc} to
-     * this one, separated by a line break which may be flattened into a space
-     * character.
+     * Append the {@code other} {@link Doc Doc} to this one, separated by
+     * a line break which may be flattened into a space character.
      *
      * @param other the other document.
-     * @return the concatenated {@link com.opencastsoftware.prettier4j.Doc Doc}.
+     * @return the concatenated {@link Doc}.
      */
     public Doc appendLineOrSpace(Doc other) {
         return this
@@ -111,12 +175,11 @@ public abstract class Doc {
     }
 
     /**
-     * Append the {@code other} {@link com.opencastsoftware.prettier4j.Doc Doc} to
-     * this one, separated by a line break which may be flattened into an empty
-     * document.
+     * Append the {@code other} {@link Doc} to this one, separated by
+     * a line break which may be flattened into an empty document.
      *
      * @param other the other document.
-     * @return the concatenated {@link com.opencastsoftware.prettier4j.Doc Doc}.
+     * @return the concatenated {@link Doc}.
      */
     public Doc appendLineOrEmpty(Doc other) {
         return this
@@ -125,28 +188,26 @@ public abstract class Doc {
     }
 
     /**
-     * Append the {@code other} {@link com.opencastsoftware.prettier4j.Doc Doc} to
-     * this one, separated by a line break which may be flattened into the
-     * {@code altText} String.
+     * Append the {@code other} {@link Doc} to this one, separated by
+     * a line break which may be flattened into the {@code altText} {@link String}.
      *
      * @param altText the alternative text to display if the line break is
      *                flattened.
      * @param other   the other document.
-     * @return the concatenated {@link com.opencastsoftware.prettier4j.Doc Doc}.
+     * @return the concatenated {@link Doc}.
      */
     public Doc appendLineOr(String altText, Doc other) {
         return this.appendLineOr(text(altText), other);
     }
 
     /**
-     * Append the {@code other} {@link com.opencastsoftware.prettier4j.Doc Doc} to
-     * this one, separated by a line break which may be flattened into the
-     * {@code altDoc} document.
+     * Append the {@code other} {@link Doc} to this one, separated by
+     * a line break which may be flattened into the {@code altDoc} document.
      *
      * @param altDoc the alternative document to display if the line break is
      *               flattened.
      * @param other  the other document.
-     * @return the concatenated {@link com.opencastsoftware.prettier4j.Doc Doc}.
+     * @return the concatenated {@link Doc}.
      */
     public Doc appendLineOr(Doc altDoc, Doc other) {
         return this
@@ -155,8 +216,7 @@ public abstract class Doc {
     }
 
     /**
-     * Indent the current {@link com.opencastsoftware.prettier4j.Doc Doc} by
-     * {@code indent} spaces.
+     * Indent the current {@link Doc} by {@code indent} spaces.
      *
      * @param indent the number of spaces of indent to apply.
      * @return the indented document.
@@ -231,11 +291,10 @@ public abstract class Doc {
     }
 
     /**
-     * Styles the current {@link com.opencastsoftware.prettier4j.Doc Doc} using the styles
-     * provided via {@code styles}.
+     * Styles the current {@link Doc} using the styles provided via {@code styles}.
      *
      * @param styles the styles to use to decorate the input {@code doc}.
-     * @return a {@link com.opencastsoftware.prettier4j.Doc Doc} decorated with the ANSI styles provided.
+     * @return a {@link Doc} decorated with the ANSI styles provided.
      * @see Styles
      * @see com.opencastsoftware.prettier4j.ansi.Color Color
      */
@@ -244,63 +303,70 @@ public abstract class Doc {
     }
 
     /**
-     * Renders the current {@link com.opencastsoftware.prettier4j.Doc Doc} into a
-     * {@link java.lang.String String}, aiming to lay out the document with at most
-     * {@code width} characters on each line.
-     * <p>
-     * By default, ANSI escape codes are rendered to the output {@link java.lang.String String}.
-     * <p>
-     * To disable ANSI escape codes, see the {@link Doc#render(int, boolean)} overload of render.
+     * Renders the current {@link Doc} into a {@link String}, attempting to lay out the document
+     * according to the {@link RenderOptions#defaults() default} rendering options.
      *
-     * @param width the preferred maximum rendering width.
-     * @return the document laid out as a {@link java.lang.String String}.
+     * @return the document laid out as a {@link String}.
      */
-    public String render(int width) {
-        return render(width, this);
+    public String render() {
+        return render(this);
     }
 
     /**
-     * Renders the current {@link com.opencastsoftware.prettier4j.Doc Doc} into a
-     * {@link java.lang.String String}, aiming to lay out the document with at most
-     * {@code width} characters on each line.
+     * Renders the current {@link Doc} into a {@link String}, attempting to lay out the document
+     * according to the rendering {@code options}.
      *
-     * @param width the preferred maximum rendering width.
-     * @param ansi whether to render ANSI escape codes.
-     * @return the document laid out as a {@link java.lang.String String}.
+     * @param options the options to use for rendering.
+     * @return the document laid out as a {@link String}.
      */
-    public String render(int width, boolean ansi) {
-        return render(width, ansi, this);
+    public String render(RenderOptions options) {
+        return render(this, options);
     }
 
     /**
-     * Renders the current {@link com.opencastsoftware.prettier4j.Doc Doc} into an
-     * {@link java.lang.Appendable Appendable}, aiming to lay out the document with at most
-     * {@code width} characters on each line.
+     * Renders the current {@link Doc Doc} into an {@link Appendable}, attempting to lay out the document
+     * according to the {@link RenderOptions#defaults() default} rendering options.
      *
-     * @param width the preferred maximum rendering width.
-     * @param ansi whether to render ANSI escape codes.
      * @param output the output to render into.
      * @throws IOException if the {@link Appendable} {@code output} throws when {@link Appendable#append(CharSequence) append}ed.
      */
-    public void render(int width, boolean ansi, Appendable output) throws IOException {
-        render(width, ansi, this, output);
+    public void render(Appendable output) throws IOException {
+        render(this, output);
     }
 
     /**
-     * Renders the current {@link com.opencastsoftware.prettier4j.Doc Doc} into an
-     * {@link java.lang.Appendable Appendable}, aiming to lay out the document with at most
-     * {@code width} characters on each line.
-     * <p>
-     * By default, ANSI escape codes are rendered to the {@code output}.
-     * <p>
-     * To disable ANSI escape codes, see the {@link Doc#render(int, boolean, Appendable)} overload of render.
+     * Renders the current {@link Doc} into a {@link String}, attempting to lay out the document with at
+     * most {@code width} characters on each line.
+     *
+     * @param width the preferred maximum rendering width.
+     * @return the document laid out as a {@link String}.
+     */
+    public String render(int width) {
+        return render(this, new RenderOptions(width, true));
+    }
+
+    /**
+     * Renders the current {@link Doc} into an {@link Appendable}, attempting to lay out the document
+     * with at most {@code width} characters on each line.
      *
      * @param width the preferred maximum rendering width.
      * @param output the output to render into.
      * @throws IOException if the {@link Appendable} {@code output} throws when {@link Appendable#append(CharSequence) append}ed.
      */
     public void render(int width, Appendable output) throws IOException {
-        render(width, this, output);
+        render(this, new RenderOptions(width, true), output);
+    }
+
+    /**
+     * Renders the current {@link Doc} into an {@link Appendable}, attempting to lay out the document
+     * according to the rendering {@code options}.
+     *
+     * @param options the options to use for rendering.
+     * @param output the output to render into.
+     * @throws IOException if the {@link Appendable} {@code output} throws when {@link Appendable#append(CharSequence) append}ed.
+     */
+    public void render(RenderOptions options, Appendable output) throws IOException {
+        render(this, options, output);
     }
 
     /**
@@ -319,6 +385,21 @@ public abstract class Doc {
 
         @Override
         Doc flatten() {
+            return this;
+        }
+
+        @Override
+        boolean hasParams() {
+            return false;
+        }
+
+        @Override
+        public Doc bind(String name, Doc value) {
+            return this;
+        }
+
+        @Override
+        public Doc bind(Map<String, Doc> bindings) {
             return this;
         }
 
@@ -354,8 +435,7 @@ public abstract class Doc {
     }
 
     /**
-     * Represents the concatenation of two
-     * {@link com.opencastsoftware.prettier4j.Doc Doc}s.
+     * Represents the concatenation of two {@link Doc}s.
      */
     public static class Append extends Doc {
         private final Doc left;
@@ -377,6 +457,21 @@ public abstract class Doc {
         @Override
         Doc flatten() {
             return left.flatten().append(right.flatten());
+        }
+
+        @Override
+        boolean hasParams() {
+            return left.hasParams() || right.hasParams();
+        }
+
+        @Override
+        public Doc bind(String name, Doc value) {
+            return new Append(left.bind(name, value), right.bind(name, value));
+        }
+
+        @Override
+        public Doc bind(Map<String, Doc> bindings) {
+            return new Append(left.bind(bindings), right.bind(bindings));
         }
 
         @Override
@@ -418,23 +513,27 @@ public abstract class Doc {
 
     /**
      * Represents a choice between a flattened and expanded layout for a
-     * single {@link com.opencastsoftware.prettier4j.Doc Doc}.
+     * single {@link Doc}.
      * <p>
      * We must maintain two invariants in constructing this class:
      *
      * <ul>
-     * <li>{@link com.opencastsoftware.prettier4j.Doc.Alternatives#left left} and
-     * {@link com.opencastsoftware.prettier4j.Doc.Alternatives#right right} must
-     * flatten to the same layout</li>
-     * <li>the first line of
-     * {@link com.opencastsoftware.prettier4j.Doc.Alternatives#left left} must not
-     * be shorter than the first line of
-     * {@link com.opencastsoftware.prettier4j.Doc.Alternatives#right right}</li>
-     * </ul>
      *
+     * <li>
+     * {@link Doc.Alternatives#left() left} and {@link Doc.Alternatives#right() right}
+     * must flatten to the same layout.
+     * </li>
+     *
+     * <li>
+     * the first line of {@link Doc.Alternatives#left() left} must not be shorter
+     * than the first line of {@link Doc.Alternatives#right() right}
+     * </li>
+     *
+     * </ul>
+     * <p>
      * As long as these invariants are preserved recursively, we know that we can
      * always choose the shorter layout for this document by choosing
-     * {@link com.opencastsoftware.prettier4j.Doc.Alternatives#right right}.
+     * {@link Alternatives#right() right}.
      */
     public static class Alternatives extends Doc {
         private final Doc left;
@@ -456,6 +555,21 @@ public abstract class Doc {
         @Override
         Doc flatten() {
             return left.flatten();
+        }
+
+        @Override
+        boolean hasParams() {
+            return left.hasParams() || right.hasParams();
+        }
+
+        @Override
+        public Doc bind(String name, Doc value) {
+            return new Alternatives(left.bind(name, value), right.bind(name, value));
+        }
+
+        @Override
+        public Doc bind(Map<String, Doc> bindings) {
+            return new Alternatives(left.bind(bindings), right.bind(bindings));
         }
 
         @Override
@@ -496,7 +610,7 @@ public abstract class Doc {
     }
 
     /**
-     * Represents an indented {@link com.opencastsoftware.prettier4j.Doc Doc}.
+     * Represents an indented {@link Doc}.
      */
     public static class Indent extends Doc {
         private final int indent;
@@ -518,6 +632,21 @@ public abstract class Doc {
         @Override
         Doc flatten() {
             return doc.flatten().indent(indent);
+        }
+
+        @Override
+        boolean hasParams() {
+            return doc.hasParams();
+        }
+
+        @Override
+        public Doc bind(String name, Doc value) {
+            return new Indent(indent, doc.bind(name, value));
+        }
+
+        @Override
+        public Doc bind(Map<String, Doc> bindings) {
+            return new Indent(indent, doc.bind(bindings));
         }
 
         @Override
@@ -570,6 +699,16 @@ public abstract class Doc {
         }
 
         @Override
+        public Doc bind(String name, Doc value) {
+            return this;
+        }
+
+        @Override
+        public Doc bind(Map<String, Doc> bindings) {
+            return this;
+        }
+
+        @Override
         public String toString() {
             return "Line []";
         }
@@ -585,6 +724,16 @@ public abstract class Doc {
 
         public LineOrEmpty() {
             super(empty());
+        }
+
+        @Override
+        public Doc bind(String name, Doc value) {
+            return this;
+        }
+
+        @Override
+        public Doc bind(Map<String, Doc> bindings) {
+            return this;
         }
 
         @Override
@@ -608,6 +757,16 @@ public abstract class Doc {
         }
 
         @Override
+        public Doc bind(String name, Doc value) {
+            return this;
+        }
+
+        @Override
+        public Doc bind(Map<String, Doc> bindings) {
+            return this;
+        }
+
+        @Override
         public String toString() {
             return "LineOrSpace []";
         }
@@ -615,7 +774,7 @@ public abstract class Doc {
 
     /**
      * Represents a line break which can be flattened into an alternative document
-     * {@link com.opencastsoftware.prettier4j.Doc.LineOr#altDoc altDoc}.
+     * {@code altDoc}.
      */
     public static class LineOr extends Doc {
         private final Doc altDoc;
@@ -630,7 +789,22 @@ public abstract class Doc {
 
         @Override
         Doc flatten() {
-            return altDoc;
+            return altDoc != this ? altDoc.flatten() : altDoc;
+        }
+
+        @Override
+        boolean hasParams() {
+            return altDoc != this && altDoc.hasParams();
+        }
+
+        @Override
+        public Doc bind(String name, Doc value) {
+            return new LineOr(altDoc.bind(name, value));
+        }
+
+        @Override
+        public Doc bind(Map<String, Doc> bindings) {
+            return new LineOr(altDoc.bind(bindings));
         }
 
         @Override
@@ -679,7 +853,7 @@ public abstract class Doc {
     }
 
     /**
-     * Represents an empty {@link com.opencastsoftware.prettier4j.Doc Doc}.
+     * Represents an empty {@link Doc}.
      */
     public static class Empty extends Doc {
         private static final Empty INSTANCE = new Empty();
@@ -697,13 +871,28 @@ public abstract class Doc {
         }
 
         @Override
+        boolean hasParams() {
+            return false;
+        }
+
+        @Override
+        public Doc bind(String name, Doc value) {
+            return this;
+        }
+
+        @Override
+        public Doc bind(Map<String, Doc> bindings) {
+            return this;
+        }
+
+        @Override
         public String toString() {
             return "Empty []";
         }
     }
 
     /**
-     * Represents a {@link com.opencastsoftware.prettier4j.Doc Doc} styled with ANSI escape codes.
+     * Represents a {@link Doc} styled with ANSI escape codes.
      */
     public static class Styled extends Doc {
         private final Doc doc;
@@ -725,6 +914,21 @@ public abstract class Doc {
         @Override
         Doc flatten() {
             return new Styled(doc.flatten(), styles);
+        }
+
+        @Override
+        boolean hasParams() {
+            return doc.hasParams();
+        }
+
+        @Override
+        public Doc bind(String name, Doc value) {
+            return new Styled(doc.bind(name, value), styles);
+        }
+
+        @Override
+        public Doc bind(Map<String, Doc> bindings) {
+            return new Styled(doc.bind(bindings), styles);
         }
 
         @Override
@@ -769,6 +973,21 @@ public abstract class Doc {
         }
 
         @Override
+        boolean hasParams() {
+            return false;
+        }
+
+        @Override
+        public Doc bind(String name, Doc value) {
+            return this;
+        }
+
+        @Override
+        public Doc bind(Map<String, Doc> bindings) {
+            return this;
+        }
+
+        @Override
         public boolean equals(Object o) {
             if (this == o) return true;
             if (o == null || getClass() != o.getClass()) return false;
@@ -790,7 +1009,7 @@ public abstract class Doc {
     }
 
     /**
-     * Represents the end of a Doc that is {@link Doc#styled(Styles.StylesOperator...) styled} with an ANSI escape code sequence.
+     * Represents the end of a {@link Doc} that is {@link Doc#styled(Styles.StylesOperator...) styled} with an ANSI escape code sequence.
      */
     public static class Reset extends Doc {
         private static final Reset INSTANCE = new Reset();
@@ -808,26 +1027,109 @@ public abstract class Doc {
         }
 
         @Override
+        boolean hasParams() {
+            return false;
+        }
+
+        @Override
+        public Doc bind(String name, Doc value) {
+            return this;
+        }
+
+        @Override
+        public Doc bind(Map<String, Doc> bindings) {
+            return this;
+        }
+
+        @Override
         public String toString() {
             return "Reset []";
         }
     }
 
     /**
-     * Construct a {@link com.opencastsoftware.prettier4j.Doc Doc} from the
-     * {@code text}.
+     * Represents a placeholder for a {@link Doc} that will be provided as a parameter.
+     */
+    public static class Param extends Doc {
+        private final String name;
+        private final boolean flattened;
+
+        private Param(String name, boolean flattened) {
+            this.name = name;
+            this.flattened = flattened;
+        }
+
+        Param(String name) {
+            this(name, false);
+        }
+
+        public String name() {
+            return this.name;
+        }
+
+        @Override
+        Doc flatten() {
+            return new Param(name, true);
+        }
+
+        @Override
+        boolean hasParams() {
+            return true;
+        }
+
+        @Override
+        public Doc bind(String name, Doc value) {
+            if (this.name.equals(name)) {
+               return flattened ? value.flatten() : value;
+            } else {
+                return this;
+            }
+        }
+
+        @Override
+        public Doc bind(Map<String, Doc> bindings) {
+            Doc value = bindings.getOrDefault(this.name, this);
+            if (value != this) {
+                return flattened ? value.flatten() : value;
+            } else {
+                return this;
+            }
+        }
+
+        @Override
+        public boolean equals(Object o) {
+            if (this == o) return true;
+            if (o == null || getClass() != o.getClass()) return false;
+            Param param = (Param) o;
+            return flattened == param.flattened && Objects.equals(name, param.name);
+        }
+
+        @Override
+        public int hashCode() {
+            return Objects.hash(name, flattened);
+        }
+
+        @Override
+        public String toString() {
+            return "Param[" +
+                    "name='" + name + '\'' +
+                    ", flattened=" + flattened +
+                    ']';
+        }
+    }
+
+    /**
+     * Construct a {@link Doc} from the {@code text}.
      *
      * @param text the input String.
-     * @return a {@link com.opencastsoftware.prettier4j.Doc Doc} representing that
-     *         String.
+     * @return a {@link Doc Doc} representing that {@link String}.
      */
     public static Doc text(String text) {
         return new Text(text);
     }
 
     /**
-     * Construct a {@link com.opencastsoftware.prettier4j.Doc Doc} representing two
-     * alternative layouts for a document.
+     * Construct a {@link Doc Doc} representing two alternative layouts for a document.
      *
      * @param left  the flattened layout for the document.
      * @param right the expanded layout for the document.
@@ -838,8 +1140,7 @@ public abstract class Doc {
     }
 
     /**
-     * Indent the input {@link com.opencastsoftware.prettier4j.Doc Doc} by
-     * {@code indent} spaces.
+     * Indent the input {@link Doc} by {@code indent} spaces.
      *
      * @param indent the number of spaces of indent to apply.
      * @param doc    the input document
@@ -850,85 +1151,86 @@ public abstract class Doc {
     }
 
     /**
-     * Creates a {@link com.opencastsoftware.prettier4j.Doc Doc} representing a
-     * line break which cannot be flattened.
+     * Creates a {@link Doc} representing a line break which cannot be flattened.
      *
-     * @return a {@link com.opencastsoftware.prettier4j.Doc Doc} representing a line
-     *         break which cannot be flattened.
+     * @return a {@link Doc} representing a line break which cannot be flattened.
      */
     public static Doc line() {
         return Line.getInstance();
     }
 
     /**
-     * Creates a {@link com.opencastsoftware.prettier4j.Doc Doc} representing a
-     * line break which may be flattened into an empty document.
+     * Creates a {@link Doc} representing a line break which may be flattened into an empty document.
      *
-     * @return a {@link com.opencastsoftware.prettier4j.Doc Doc} representing a line
-     *         break which may be flattened into an empty document.
+     * @return a {@link Doc} representing a line break which may be flattened into an empty document.
      */
     public static Doc lineOrEmpty() {
         return LineOrEmpty.getInstance();
     }
 
     /**
-     * Creates a {@link com.opencastsoftware.prettier4j.Doc Doc} representing a
-     * line break which may be flattened into a single space character.
+     * Creates a {@link Doc} representing a line break which may be flattened into a single space character.
      *
-     * @return a {@link com.opencastsoftware.prettier4j.Doc Doc} representing a line
-     *         break which may be flattened into a single space character.
+     * @return a {@link Doc} representing a line break which may be flattened into a single space character.
      */
     public static Doc lineOrSpace() {
         return LineOrSpace.getInstance();
     }
 
     /**
-     * Creates an empty {@link com.opencastsoftware.prettier4j.Doc Doc}.
+     * Creates an empty {@link Doc}.
      *
-     * @return an empty {@link com.opencastsoftware.prettier4j.Doc Doc}.
+     * @return an empty {@link Doc}.
      */
     public static Doc empty() {
         return Empty.getInstance();
     }
 
     /**
-     * Creates a {@link com.opencastsoftware.prettier4j.Doc Doc} representing a line
-     * break which may be flattened into an alternative document {@code altDoc}.
+     * Creates a {@link Doc} representing a line break which may be flattened into
+     * an alternative document {@code altDoc}.
      *
      * @param altDoc the alternative document to use if the line break is flattened.
-     * @return a {@link com.opencastsoftware.prettier4j.Doc Doc} representing a line
-     *         break which may be flattened into an alternative document
-     *         {@code altDoc}.
+     * @return a {@link Doc} representing a line break which may be flattened into
+               an alternative document {@code altDoc}.
      */
     public static Doc lineOr(Doc altDoc) {
         return new LineOr(altDoc);
     }
 
     /**
-     * Creates a {@link com.opencastsoftware.prettier4j.Doc Doc} representing a line
-     * break which may be flattened into the alternative text {@code altText}.
+     * Creates a {@link Doc} representing a line break which may be flattened into
+     * the alternative text {@code altText}.
      *
      * @param altText the alternative text to use if the line break is flattened.
-     * @return a {@link com.opencastsoftware.prettier4j.Doc Doc} representing a line
-     *         break which may be flattened into the alternative text
-     *         {@code altText}.
+     * @return a {@link Doc} representing a line break which may be flattened into
+     *         the alternative text {@code altText}.
      */
     public static Doc lineOr(String altText) {
         return new LineOr(text(altText));
     }
 
     /**
-     * Styles the input {@link com.opencastsoftware.prettier4j.Doc Doc} using the styles
-     * provided via {@code styles}.
+     * Styles the input {@link Doc} using the styles provided via {@code styles}.
      *
      * @param doc the input document.
      * @param styles the styles to use to decorate the input {@code doc}.
-     * @return a {@link com.opencastsoftware.prettier4j.Doc Doc} decorated with the ANSI styles provided.
+     * @return a {@link Doc} decorated with the ANSI styles provided.
      * @see Styles
      * @see com.opencastsoftware.prettier4j.ansi.Color Color
      */
     public static Doc styled(Doc doc, Styles.StylesOperator ...styles) {
         return new Styled(doc, styles);
+    }
+
+    /**
+     * Creates a {@link Doc} which acts as a placeholder for an argument {@link Doc} that will be provided
+     * by {@link Doc#bind(String, Doc) binding} parameters prior to {@link Doc#render(int) render}ing.
+     * @param name the name of the parameter.
+     * @return a parameter {@link Doc}.
+     */
+    public static Doc param(String name) {
+        return new Param(name);
     }
 
     /**
@@ -986,12 +1288,10 @@ public abstract class Doc {
     }
 
     /**
-     * Creates a {@link com.opencastsoftware.prettier4j.Doc Doc} which represents a
-     * group that can be flattened into a more compact layout.
+     * Creates a {@link Doc} which represents a group that can be flattened into a more compact layout.
      *
      * @param doc the document which is declared as a group which may be flattened.
-     * @return a {@link com.opencastsoftware.prettier4j.Doc Doc} which represents a
-     *         group that can be flattened into a more compact layout.
+     * @return a {@link Doc} which represents a group that can be flattened into a more compact layout.
      */
     public static Doc group(Doc doc) {
         return alternatives(doc.flatten(), doc);
@@ -1005,8 +1305,7 @@ public abstract class Doc {
      *
      * @param remaining the remaining space on the current line.
      * @param entries   the entries we'd like to fit onto this line
-     * @return true if we can fit all
-     *         {@link com.opencastsoftware.prettier4j.Doc.Text entries} up to the
+     * @return true if we can fit all {@link Doc.Text entries} up to the
      *         next line break into the remaining characters of the current line.
      */
     static boolean fits(int remaining, Deque<Map.Entry<Integer, Doc>> entries) {
@@ -1035,32 +1334,37 @@ public abstract class Doc {
      * and line position, choosing the {@code left} document if it fits and the
      * {@code right} document otherwise.
      *
-     * @param width    the preferred maximum width for rendering.
-     * @param indent   the current indentation level.
-     * @param position the position in the current line.
      * @param left     the preferred compact layout.
      * @param right    the expanded layout.
+     * @param options  the options to use for rendering.
+     * @param indent   the current indentation level.
+     * @param position the position in the current line.
      * @return the entries of the chosen layout.
      */
-    static Deque<Map.Entry<Integer, Doc>> chooseLayout(int width, boolean ansi, int indent, int position, Doc left, Doc right) {
-        Deque<Map.Entry<Integer, Doc>> leftEntries = normalize(width, ansi, indent, position, left);
-        return fits(width - position, leftEntries) ? leftEntries : normalize(width, ansi, indent, position, right);
+    static Deque<Map.Entry<Integer, Doc>> chooseLayout(Doc left, Doc right, RenderOptions options, int indent, int position) {
+        Deque<Map.Entry<Integer, Doc>> leftEntries = normalize(left, options, indent, position);
+
+        int remaining = options.lineWidth() - position;
+
+        if (fits(remaining, leftEntries)) {
+            return leftEntries;
+        } else {
+            return normalize(right, options, indent, position);
+        }
     }
 
     /**
      * Traverse the input {@code doc} recursively, eliminating all nodes except for
-     * {@link com.opencastsoftware.prettier4j.Doc.Text Text} and subtypes of
-     * {@link com.opencastsoftware.prettier4j.Doc.LineOr LineOr}, and producing a
+     * {@link Doc.Text Text} and subtypes of {@link Doc.LineOr LineOr}, and producing a
      * queue of entries to be rendered.
      *
-     * @param width    the preferred maximum width for rendering.
-     * @param ansi     whether to render ANSI escape codes.
+     * @param doc      the document to be rendered.
+     * @param options  the options to use for rendering.
      * @param indent   the current indentation level.
      * @param position the current position in the line.
-     * @param doc      the document to be rendered.
      * @return a queue of entries to be rendered.
      */
-    static Deque<Map.Entry<Integer, Doc>> normalize(int width, boolean ansi, int indent, int position, Doc doc) {
+    static Deque<Map.Entry<Integer, Doc>> normalize(Doc doc, RenderOptions options, int indent, int position) {
         // Not yet normalized entries
         Deque<Map.Entry<Integer, Doc>> inQueue = new ArrayDeque<>();
 
@@ -1085,7 +1389,7 @@ public abstract class Doc {
             } else if (entryDoc instanceof Styled) {
                 // Eliminate Styled
                 Styled styledDoc = (Styled) entryDoc;
-                if (ansi) {
+                if (options.emitAnsiEscapes()) {
                     // Note reverse order
                     inQueue.addFirst(new SimpleEntry<>(entryIndent, Reset.getInstance()));
                     inQueue.addFirst(new SimpleEntry<>(entryIndent, styledDoc.doc()));
@@ -1104,7 +1408,7 @@ public abstract class Doc {
                 Alternatives altDoc = (Alternatives) entryDoc;
                 // These entries are already normalized
                 Deque<Map.Entry<Integer, Doc>> chosenEntries = chooseLayout(
-                        width, ansi, entryIndent, position, altDoc.left(), altDoc.right());
+                        altDoc.left(), altDoc.right(), options, entryIndent, position);
                 // Note reverse order
                 chosenEntries.descendingIterator().forEachRemaining(inQueue::addFirst);
             } else if (entryDoc instanceof Text) {
@@ -1128,36 +1432,18 @@ public abstract class Doc {
     }
 
     /**
-     * Renders the input {@link com.opencastsoftware.prettier4j.Doc Doc} into an
-     * {@link java.lang.Appendable Appendable}, aiming to lay out the document with at most
-     * {@code width} characters on each line.
-     * <p>
-     * By default, ANSI escape codes are rendered to the {@code output}.
-     * <p>
-     * To disable ANSI escape codes, see the {@link Doc#render(int, boolean, Doc, Appendable)} overload of render.
+     * Renders the input {@link Doc} into an {@link Appendable}, attempting to lay out the document
+     * according to the rendering {@code options}.
      *
-     * @param width  the preferred maximum rendering width.
-     * @param doc    the document to be rendered.
-     * @param output the output to render into.
+     * @param doc     the document to be rendered.
+     * @param options the options to use for rendering.
+     * @param output  the output to render into.
      * @throws IOException if the {@link Appendable} {@code output} throws when {@link Appendable#append(CharSequence) append}ed.
      */
-    public static void render(int width, Doc doc, Appendable output) throws IOException {
-        render(width, true, doc, output);
-    }
+    public static void render(Doc doc, RenderOptions options, Appendable output) throws IOException {
+        if (doc.hasParams()) { throw new IllegalStateException("This Doc contains unbound parameters"); }
 
-    /**
-     * Renders the input {@link com.opencastsoftware.prettier4j.Doc Doc} into an
-     * {@link java.lang.Appendable Appendable}, aiming to lay out the document with at most
-     * {@code width} characters on each line.
-     *
-     * @param width  the preferred maximum rendering width.
-     * @param ansi   whether to render ANSI escape codes.
-     * @param doc    the document to be rendered.
-     * @param output the output to render into.
-     * @throws IOException if the {@link Appendable} {@code output} throws when {@link Appendable#append(CharSequence) append}ed.
-     */
-    public static void render(int width, boolean ansi, Doc doc, Appendable output) throws IOException {
-        Deque<Map.Entry<Integer, Doc>> renderQueue = normalize(width, ansi, 0, 0, doc);
+        Deque<Map.Entry<Integer, Doc>> renderQueue = normalize(doc, options, 0, 0);
         AttrsStack attrsStack = new AttrsStack();
 
         for (Map.Entry<Integer, Doc> entry : renderQueue) {
@@ -1171,7 +1457,7 @@ public abstract class Doc {
             } else if (entryDoc instanceof LineOr) {
                 output.append(System.lineSeparator());
                 for (int i = 0; i < entryIndent; i++) {
-                    output.append(" ");
+                    output.append(' ');
                 }
             } else if (entryDoc instanceof Reset) {
                 long resetAttrs = attrsStack.popLast();
@@ -1189,41 +1475,45 @@ public abstract class Doc {
     }
 
     /**
-     * Renders the input {@link com.opencastsoftware.prettier4j.Doc Doc} into a
-     * {@link java.lang.String String}, aiming to lay out the document with at most
-     * {@code width} characters on each line.
-     * <p>
-     * By default, ANSI escape codes are rendered to the output {@link java.lang.String String}.
-     * <p>
-     * To disable ANSI escape codes, see the {@link Doc#render(int, boolean, Doc)} overload of render.
+     * Renders the input {@link Doc} into an {@link Appendable}, attempting to lay out the document
+     * according to the {@link RenderOptions#defaults() default} rendering options.
      *
-     * @param width  the preferred maximum rendering width.
-     * @param doc    the document to be rendered.
-     * @return the document laid out as a {@link java.lang.String String}.
+     * @param doc     the document to be rendered.
+     * @param output  the output to render into.
+     * @throws IOException if the {@link Appendable} {@code output} throws when {@link Appendable#append(CharSequence) append}ed.
      */
-    public static String render(int width, Doc doc) {
-        return render(width, true, doc);
+    public static void render(Doc doc, Appendable output) throws IOException {
+        render(doc, RenderOptions.defaults(), output);
     }
 
     /**
-     * Renders the input {@link com.opencastsoftware.prettier4j.Doc Doc} into a
-     * {@link java.lang.String String}, aiming to lay out the document with at most
-     * {@code width} characters on each line.
+     * Renders the input {@link Doc} into a {@link String}, attempting to lay out the document
+     * according to the rendering {@code options}.
      *
-     * @param width  the preferred maximum rendering width.
-     * @param ansi   whether to render ANSI escape codes.
-     * @param doc    the document to be rendered.
-     * @return the document laid out as a {@link java.lang.String String}.
+     * @param doc     the document to be rendered.
+     * @param options the options to use for rendering.
+     * @return the document laid out as a {@link String}.
      */
-    public static String render(int width, boolean ansi, Doc doc) {
+    public static String render(Doc doc, RenderOptions options) {
         StringBuilder output = new StringBuilder();
 
         try {
-            render(width, ansi, doc, output);
+            render(doc, options, output);
         } catch (IOException ioe) {
             throw new UncheckedIOException(ioe);
         }
 
         return output.toString();
+    }
+
+    /**
+     * Renders the input {@link Doc} into a {@link String}, attempting to lay out the document
+     * according to the {@link RenderOptions#defaults() default} rendering options.
+     *
+     * @param doc the document to be rendered.
+     * @return the document laid out as a {@link String}.
+     */
+    public static String render(Doc doc) {
+        return render(doc, RenderOptions.defaults());
     }
 }

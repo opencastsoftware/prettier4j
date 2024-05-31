@@ -36,22 +36,22 @@ To render documents using this library you must use [com.opencastsoftware.pretti
 
 In order to create documents, check out the static methods of that class, especially:
 
-* [empty()](https://www.javadoc.io/static/com.opencastsoftware/prettier4j/0.2.0/com/opencastsoftware/prettier4j/Doc.html#empty--) - creates an empty `Doc`.
-* [text(String)](https://www.javadoc.io/static/com.opencastsoftware/prettier4j/0.2.0/com/opencastsoftware/prettier4j/Doc.html#text-java.lang.String-) - creates a `Doc` from a `String`. These are used as the atomic text nodes of a document.
+* [empty()](https://www.javadoc.io/static/com.opencastsoftware/prettier4j/0.2.0/com/opencastsoftware/prettier4j/Doc.html#empty()) - creates an empty `Doc`.
+* [text(String)](https://www.javadoc.io/static/com.opencastsoftware/prettier4j/0.2.0/com/opencastsoftware/prettier4j/Doc.html#text(java.lang.String)) - creates a `Doc` from a `String`. These are used as the atomic text nodes of a document.
 
-To render documents, the [render(int)](https://www.javadoc.io/static/com.opencastsoftware/prettier4j/0.2.0/com/opencastsoftware/prettier4j/Doc.html#render-int-) instance method is provided. The argument to this method declares a target line width when laying out the document.
+To render documents, the [render(int)](https://www.javadoc.io/static/com.opencastsoftware/prettier4j/0.2.0/com/opencastsoftware/prettier4j/Doc.html#render(int)) instance method is provided. The argument to this method declares a target line width when laying out the document.
 
 It's not always possible for documents to fit within this target width. For example, a single `Doc.text` node may be longer than the target width if the argument `String` is long enough.
 
-To concatenate documents, the [append(Doc)](https://www.javadoc.io/static/com.opencastsoftware/prettier4j/0.2.0/com/opencastsoftware/prettier4j/Doc.html#append-com.opencastsoftware.prettier4j.Doc-) instance method and related methods providing different separators are provided.
+To concatenate documents, the [append(Doc)](https://www.javadoc.io/static/com.opencastsoftware/prettier4j/0.2.0/com/opencastsoftware/prettier4j/Doc.html#append(com.opencastsoftware.prettier4j.Doc)) instance method and related methods providing different separators are provided.
 
 As a general rule, the best way to construct documents using this algorithm is to construct your document by concatenating text nodes, while declaring each place where a line break could be added if necessary.
 
 The layout algorithm uses the concept of "flattened" layouts - layouts which are used when they are able to fit within the remaining space on the current line. In other words, they are "flattened" onto a single line.
 
-The [lineOrSpace()](https://www.javadoc.io/static/com.opencastsoftware/prettier4j/0.2.0/com/opencastsoftware/prettier4j/Doc.html#lineOrSpace--), [lineOrEmpty()](https://www.javadoc.io/static/com.opencastsoftware/prettier4j/0.2.0/com/opencastsoftware/prettier4j/Doc.html#lineOrEmpty--) and related static methods are used to declare line breaks which may be replaced with alternative content if the current `Doc` is flattened.
+The [lineOrSpace()](https://www.javadoc.io/static/com.opencastsoftware/prettier4j/0.2.0/com/opencastsoftware/prettier4j/Doc.html#lineOrSpace()), [lineOrEmpty()](https://www.javadoc.io/static/com.opencastsoftware/prettier4j/0.2.0/com/opencastsoftware/prettier4j/Doc.html#lineOrEmpty()) and related static methods are used to declare line breaks which may be replaced with alternative content if the current `Doc` is flattened.
 
-The [line()](https://www.javadoc.io/static/com.opencastsoftware/prettier4j/0.2.0/com/opencastsoftware/prettier4j/Doc.html#line--) static method creates a line break which may not be flattened.
+The [line()](https://www.javadoc.io/static/com.opencastsoftware/prettier4j/0.2.0/com/opencastsoftware/prettier4j/Doc.html#line()) static method creates a line break which may not be flattened.
 
 However, none of these primitives create flattened layouts on their own.
 
@@ -75,7 +75,7 @@ Doc.text("one")
 // ===> "one\ntwo\nthree"
 ```
 
-However, if we declare each of those documents as a group using the static method [group(Doc)](https://www.javadoc.io/static/com.opencastsoftware/prettier4j/0.2.0/com/opencastsoftware/prettier4j/Doc.html#group-com.opencastsoftware.prettier4j.Doc-), they are rendered differently:
+However, if we declare each of those documents as a group using the static method [group(Doc)](https://www.javadoc.io/static/com.opencastsoftware/prettier4j/0.2.0/com/opencastsoftware/prettier4j/Doc.html#group(com.opencastsoftware.prettier4j.Doc)), they are rendered differently:
 
 ```java
 Doc.group(
