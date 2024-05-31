@@ -81,13 +81,22 @@ tasks.withType<JavaCompile> {
 tasks.withType<Javadoc> {
     options {
         this as StandardJavadocDocletOptions
+
+        addStringOption("-release", "8")
+
+        // Only show overridden methods in summary section
+        addStringOption("-override-methods", "summary")
+
+        // Syntax highlighting of snippets
         addBooleanOption("-allow-script-in-comments", true)
+
         header(
             """
             |<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/prismjs@1/themes/prism-okaidia.min.css">
             """
                 .trimMargin()
         )
+
         footer(
             """
             |<script src="https://cdn.jsdelivr.net/npm/prismjs@1/components/prism-core.min.js"></script>
@@ -95,6 +104,18 @@ tasks.withType<Javadoc> {
             """
                 .trimMargin()
         )
+
+        // JDK documentation links:
+        // Unfortunately we can't link to JDK8 because JDK11 javadoc
+        // cannot handle missing element-list file
+        links("https://docs.oracle.com/en/java/javase/11/docs/api/")
+
+        // Javadoc.io links
+        val compileClasspath by configurations.getting
+        val javadocIo = "https://www.javadoc.io/doc"
+        compileClasspath.allDependencies.forEach {
+            links("$javadocIo/${it.group}/${it.name}/${it.version}/")
+        }
     }
 }
 

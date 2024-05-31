@@ -6,7 +6,12 @@ package com.opencastsoftware.prettier4j;
 
 import java.util.Objects;
 
+/**
+ * Options which determine how {@link Doc}s are rendered.
+ */
 public class RenderOptions {
+    private static final RenderOptions DEFAULT = new RenderOptions(80, true);
+
     private final int lineWidth;
     private final boolean emitAnsiEscapes;
 
@@ -15,18 +20,40 @@ public class RenderOptions {
         this.emitAnsiEscapes = emitAnsiEscapes;
     }
 
+    /**
+     * Determines the preferred maximum line width.
+     *
+     * @return the preferred maximum line width.
+     */
     public int lineWidth() {
         return this.lineWidth;
     }
 
+    /**
+     * Determines whether to emit ANSI escape code sequences.
+     *
+     * @return whether to emit ANSI escape code sequences.
+     */
     public boolean emitAnsiEscapes() {
         return this.emitAnsiEscapes;
     }
 
+    /**
+     * Create a {@link RenderOptions} populated with default values.
+     * <p>
+     * This configures a preferred maximum line width of 80 characters,
+     * and enables ANSI escape code sequences.
+     *
+     * @return the default rendering options.
+     */
     public static RenderOptions defaults() {
-        return new RenderOptions(80, true);
+        return DEFAULT;
     }
 
+    /**
+     * Creates a {@link Builder} for {@link RenderOptions}.
+     * @return a {@link RenderOptions} builder.
+     */
     public static Builder builder() {
         return new Builder();
     }
@@ -52,20 +79,40 @@ public class RenderOptions {
                 ']';
     }
 
+    /**
+     * A builder for configuring {@link RenderOptions}.
+     */
     public static class Builder {
         private int lineWidth;
         private boolean emitAnsiEscapes;
         private Builder() {}
 
+        /**
+         * Build the resulting {@link RenderOptions}.
+         *
+         * @return the {@link RenderOptions}.
+         */
         public RenderOptions build() {
             return new RenderOptions(this.lineWidth, this.emitAnsiEscapes);
         }
 
+        /**
+         * Set the preferred maximum rendering width.
+         *
+         * @param width the preferred maximum rendering width.
+         * @return this {@link Builder} for fluent usage.
+         */
         public Builder lineWidth(int width) {
             this.lineWidth = width;
             return this;
         }
 
+        /**
+         * Set whether to emit ANSI escape code sequences.
+         *
+         * @param emitAnsi whether to emit ANSI escape code sequences.
+         * @return this {@link Builder} for fluent usage.
+         */
         public Builder emitAnsiEscapes(boolean emitAnsi) {
             this.emitAnsiEscapes = emitAnsi;
             return this;
