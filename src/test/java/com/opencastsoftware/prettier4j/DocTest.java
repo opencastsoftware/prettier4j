@@ -19,6 +19,7 @@ import java.io.Writer;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.function.UnaryOperator;
+import java.util.stream.Collectors;
 
 import static com.opencastsoftware.prettier4j.Doc.*;
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -206,6 +207,40 @@ public class DocTest {
                                         Doc.text(",").append(Doc.lineOrSpace()),
                                         Arrays.asList("a", "b", "c").stream().map(Doc::text))
                                 .bracket(2, Doc.lineOrEmpty(), Doc.text("("), Doc.text(")")))
+                .render(10);
+
+        assertThat(actual, is(equalTo(expected)));
+    }
+
+    @Test
+    void testMargin() {
+        String expected = "\n|functionCall(\n|  a,\n|  b,\n|  c\n|)";
+
+        // Margin only applies after the first line break, so we must begin with a line()
+        String actual = line().append(text("functionCall"))
+                .append(
+                        Doc.intersperse(
+                                        Doc.text(",").append(Doc.lineOrSpace()),
+                                        Arrays.asList("a", "b", "c").stream().map(Doc::text))
+                                .bracket(2, Doc.lineOrEmpty(), Doc.text("("), Doc.text(")")))
+                .margin(text("|"))
+                .render(10);
+
+        assertThat(actual, is(equalTo(expected)));
+    }
+
+    @Test
+    void testNestedMargin() {
+        String expected = "\n|functionCall(\n|>  a,\n|>  b,\n|>  c\n|)";
+
+        // Margin only applies after the first line break, so we must begin with a line()
+        String actual = line().append(text("functionCall"))
+                .append(
+                        Doc.intersperse(
+                                        Doc.text(",").append(Doc.lineOrSpace()),
+                                        Arrays.asList("a", "b", "c").stream().map(Doc::text))
+                                .bracket(2, Doc.lineOrEmpty(), text(">"), Doc.text("("), Doc.text(")")))
+                .margin(text("|"))
                 .render(10);
 
         assertThat(actual, is(equalTo(expected)));
@@ -450,7 +485,7 @@ public class DocTest {
     @Test
     void testNestedNullFgStyle() {
         String expected =
-                sgrCode(37) + '(' +
+                sgrCode(3, 37) + '(' +
                         sgrCode(39) + 'a' +
                         sgrCode(37) + ", " +
                         sgrCode(39) + 'b' +
@@ -460,7 +495,7 @@ public class DocTest {
                 .append(text(","))
                 .appendSpace(text("b").styled(Styles.fg(null)))
                 .bracket(2, Doc.lineOrEmpty(), text("("), text(")"))
-                .styled(Styles.fg(Color.white()))
+                .styled(Styles.fg(Color.white()), Styles.italic())
                 .render(6);
 
         char[] expectedChars = expected.toCharArray();
@@ -683,7 +718,7 @@ public class DocTest {
     @Test
     void testNestedNullBgStyle() {
         String expected =
-                sgrCode(47) + '(' +
+                sgrCode(1, 47) + '(' +
                         sgrCode(49) + 'a' +
                         sgrCode(47) + ", " +
                         sgrCode(49) + 'b' +
@@ -693,7 +728,7 @@ public class DocTest {
                 .append(text(","))
                 .appendSpace(text("b").styled(Styles.bg(null)))
                 .bracket(2, Doc.lineOrEmpty(), text("("), text(")"))
-                .styled(Styles.bg(Color.white()))
+                .styled(Styles.bg(Color.white()), Styles.bold())
                 .render(6);
 
         char[] expectedChars = expected.toCharArray();
@@ -1107,7 +1142,7 @@ public class DocTest {
     @Property
     void leftUnitLaw(
             @ForAll @IntRange(min = 5, max = 200) int width,
-            @ForAll("noParamDocs") Doc doc) {
+            @ForAll("docsWithSeparators") Doc doc) {
         String appended = doc.append(Doc.empty()).render(width);
         String original = doc.render(width);
         assertThat(appended, is(equalTo(original)));
@@ -1124,7 +1159,7 @@ public class DocTest {
     @Property
     void rightUnitLaw(
             @ForAll @IntRange(min = 5, max = 200) int width,
-            @ForAll("noParamDocs") Doc doc) {
+            @ForAll("docsWithSeparators") Doc doc) {
         String appended = Doc.empty().append(doc).render(width);
         String original = doc.render(width);
         assertThat(appended, is(equalTo(original)));
@@ -1141,9 +1176,9 @@ public class DocTest {
     @Property
     void associativityLaw(
             @ForAll @IntRange(min = 5, max = 200) int width,
-            @ForAll("noParamDocs") Doc x,
-            @ForAll("noParamDocs") Doc y,
-            @ForAll("noParamDocs") Doc z) {
+            @ForAll("docsWithSeparators") Doc x,
+            @ForAll("docsWithSeparators") Doc y,
+            @ForAll("docsWithSeparators") Doc z) {
         String leftAssociated = x.append(y).append(z).render(width);
         String rightAssociated = x.append(y.append(z)).render(width);
         assertThat(leftAssociated, is(equalTo(rightAssociated)));
@@ -1192,7 +1227,7 @@ public class DocTest {
             @ForAll @IntRange(min = 5, max = 200) int width,
             @ForAll @IntRange(min = 0, max = 200) int i,
             @ForAll @IntRange(min = 0, max = 200) int j,
-            @ForAll("noParamDocs") Doc doc) {
+            @ForAll("docsWithSeparators") Doc doc) {
         String sumIndent = doc.indent(i + j).render(width);
         String nestedIndent = doc.indent(j).indent(i).render(width);
         assertThat(sumIndent, is(equalTo(nestedIndent)));
@@ -1208,7 +1243,7 @@ public class DocTest {
     @Property
     void indentZeroEquivalentToNoIndent(
             @ForAll @IntRange(min = 5, max = 200) int width,
-            @ForAll("noParamDocs") Doc doc) {
+            @ForAll("docsWithSeparators") Doc doc) {
         String zeroIndent = doc.indent(0).render(width);
         String noIndent = doc.render(width);
         assertThat(zeroIndent, is(equalTo(noIndent)));
@@ -1225,8 +1260,8 @@ public class DocTest {
     void indentDistributesOverAppend(
             @ForAll @IntRange(min = 5, max = 200) int width,
             @ForAll @IntRange(min = 0, max = 200) int indent,
-            @ForAll("noParamDocs") Doc left,
-            @ForAll("noParamDocs") Doc right) {
+            @ForAll("docsWithSeparators") Doc left,
+            @ForAll("docsWithSeparators") Doc right) {
         String indentedAppend = left.append(right).indent(indent).render(width);
         String appendedIndents = left.indent(indent).append(right.indent(indent)).render(width);
         assertThat(indentedAppend, is(equalTo(appendedIndents)));
@@ -1266,6 +1301,35 @@ public class DocTest {
     }
 
     @Property
+    void emptyMarginEquivalentToNoMargin(
+            @ForAll @IntRange(min = 5, max = 200) int width,
+            @ForAll("docsWithSeparators") Doc doc) {
+        String noMargin = doc.render(width);
+        String emptyMargin = doc.margin(Doc.empty()).render(width);
+        assertThat(emptyMargin, is(equalTo(noMargin)));
+    }
+
+    @Property
+    void nestedMarginEquivalentToAppendMargin(
+            @ForAll @IntRange(min = 5, max = 200) int width,
+            @ForAll("docsWithSeparators") Doc doc,
+            @ForAll("docs") Doc margin1,
+            @ForAll("docs") Doc margin2) {
+        String appendMargin = doc.margin(margin1.append(margin2)).render(width);
+        String nestedMargin = doc.margin(margin2).margin(margin1).render(width);
+        assertThat(nestedMargin, is(equalTo(appendMargin)));
+    }
+
+    @Property
+    void emptyStylesEquivalentToNoStyles(
+            @ForAll @IntRange(min = 5, max = 200) int width,
+            @ForAll("docsWithSeparators") Doc doc) {
+        String emptyStyles = doc.styled().render(width);
+        String noStyles = doc.render(width);
+        assertThat(emptyStyles.toCharArray(), is(equalTo(noStyles.toCharArray())));
+    }
+
+    @Property
     void paramHasParams(@ForAll String paramName) {
         Doc boundDoc = Doc.param(paramName);
         assertThat(boundDoc.hasParams(), is(true));
@@ -1274,7 +1338,7 @@ public class DocTest {
     @Property
     void paramBindingEliminatesParam(
             @ForAll String paramName,
-            @ForAll("noParamDocs") Doc argDoc
+            @ForAll("docsWithSeparators") Doc argDoc
     ) {
         Doc boundDoc = Doc.param(paramName)
                 .bind(paramName, argDoc);
@@ -1285,7 +1349,7 @@ public class DocTest {
     void paramBindingWrongNameDoesNothing(
             @ForAll String paramName,
             @ForAll String unrelatedName,
-            @ForAll("noParamDocs") Doc argDoc
+            @ForAll("docsWithSeparators") Doc argDoc
     ) {
         Assume.that(!paramName.equals(unrelatedName));
 
@@ -1303,7 +1367,7 @@ public class DocTest {
             @ForAll String paramName,
             @ForAll String unrelatedName1,
             @ForAll String unrelatedName2,
-            @ForAll("noParamDocs") Doc argDoc
+            @ForAll("docsWithSeparators") Doc argDoc
     ) {
         Assume.that(!paramName.equals(unrelatedName1));
         Assume.that(!paramName.equals(unrelatedName2));
@@ -1324,7 +1388,7 @@ public class DocTest {
     void bindingTopLevelParamEquivalentToArgDoc(
             @ForAll @IntRange(min = 5, max = 200) int width,
             @ForAll String paramName,
-            @ForAll("noParamDocs") Doc argDoc
+            @ForAll("docsWithSeparators") Doc argDoc
     ) {
         String renderedArg = argDoc.render(width);
 
@@ -1352,9 +1416,9 @@ public class DocTest {
 
     @Property
     void bindingDocWithoutParamsDoesNothing(
-            @ForAll("noParamDocs") Doc doc,
+            @ForAll("docsWithSeparators") Doc doc,
             @ForAll String paramName,
-            @ForAll("noParamDocs") Doc argDoc
+            @ForAll("docsWithSeparators") Doc argDoc
     ) {
         Doc boundDoc = doc.bind(paramName, argDoc);
         assertThat(boundDoc, is(equalTo(doc)));
@@ -1365,7 +1429,7 @@ public class DocTest {
             @ForAll @IntRange(min = 5, max = 200) int width,
             @ForAll("unaryDocs") UnaryOperator<Doc> unaryDoc,
             @ForAll String paramName,
-            @ForAll("noParamDocs") Doc argDoc
+            @ForAll("docsWithSeparators") Doc argDoc
     ) {
         String inlined = unaryDoc.apply(argDoc).render(width);
 
@@ -1379,9 +1443,9 @@ public class DocTest {
 
     @Test
     void testEquals() {
-        Doc left = docs().sample();
+        Doc left = docsWithParams().sample();
 
-        Doc right = docs().sampleStream()
+        Doc right = docsWithParams().sampleStream()
                 .filter(r -> !left.equals(r))
                 .findFirst().get();
 
@@ -1407,7 +1471,7 @@ public class DocTest {
                         Alternatives.class, Indent.class,
                         LineOr.class, Empty.class, Escape.class,
                         Reset.class, Styled.class, Param.class)
-                .withPrefabValue(Doc.class, docs().sample())
+                .withPrefabValue(Doc.class, docsWithParams().sample())
                 .verify();
 
         ToStringVerifier
@@ -1417,24 +1481,14 @@ public class DocTest {
     }
 
     @Provide
-    Arbitrary<Doc> paramDocs() {
-        return docs().filter(Doc::hasParams);
-    }
-
-    @Provide
-    Arbitrary<Doc> noParamDocs() {
-        return docs().filter(doc -> !doc.hasParams());
-    }
-
-    @Provide
     Arbitrary<UnaryOperator<Doc>> unaryDocs() {
         return Arbitraries.lazyOf(
             () -> Arbitraries.of(Doc::group),
             () -> Arbitraries.of(Doc::lineOr),
             () -> Arbitraries.of(doc -> doc.indent(2)),
             () -> Arbitraries.of(doc -> doc.bracket(2, lineOrEmpty(), text("["), text("]"))),
-            () -> noParamDocs().map(doc1 -> doc1::append),
-            () -> noParamDocs().map(doc1 -> doc2 -> doc2.append(doc1)),
+            () -> docsWithSeparators().map(doc1 -> doc1::append),
+            () -> docsWithSeparators().map(doc1 -> doc2 -> doc2.append(doc1)),
             () -> unaryDocs().tuple2().map(tuple -> doc -> tuple.get1().andThen(tuple.get2()).apply(doc))
         );
     }
@@ -1485,10 +1539,29 @@ public class DocTest {
     }
 
     @Provide
-    Arbitrary<Doc> docs() {
+    Arbitrary<Doc> docsWithParams() {
         return Arbitraries.lazyOf(
                 // Text
+                // Repeated to reduce the frequency of recursive generation
                 () -> Arbitraries.strings().ofMaxLength(100).map(Doc::text),
+                () -> Arbitraries.strings().ofMaxLength(100).map(Doc::text),
+                () -> Arbitraries.strings().ofMaxLength(100).map(Doc::text),
+                () -> Arbitraries.strings().ofMaxLength(100).map(Doc::text),
+                () -> Arbitraries.strings().ofMaxLength(100).map(Doc::text),
+                // Empty
+                // Repeated to reduce the frequency of recursive generation
+                () -> Arbitraries.just(Doc.empty()),
+                () -> Arbitraries.just(Doc.empty()),
+                // Append
+                () -> docsWithParams().tuple2().map(tuple -> tuple.get1().append(tuple.get2())),
+                // Margin
+                () -> docsWithParams().tuple2().filter(tuple -> !tuple.get2().hasLineSeparators()).map(tuple -> tuple.get1().margin(tuple.get2())),
+                // Indent
+                () -> docsWithParams().map(doc -> doc.indent(2)),
+                // Alternatives
+                () -> docsWithParams().map(Doc::group),
+                // Styled
+                () -> docsWithParams().flatMap(doc -> styles().array(Styles.StylesOperator[].class).ofMaxSize(5).map(doc::styled)),
                 // Line
                 () -> Arbitraries.just(Doc.line()),
                 // LineOrSpace
@@ -1496,44 +1569,99 @@ public class DocTest {
                 // LineOrEmpty
                 () -> Arbitraries.just(Doc.lineOrEmpty()),
                 // LineOr
-                () -> docs().map(Doc::lineOr),
                 () -> Arbitraries.strings().ofMaxLength(10).map(Doc::lineOr),
-                // Empty
-                () -> Arbitraries.just(Doc.empty()),
-                // Append
-                () -> docs().tuple2().map(tuple -> tuple.get1().append(tuple.get2())),
-                // Indent
-                () -> docs().map(doc -> doc.indent(2)),
+                () -> docsWithParams().map(Doc::lineOr),
                 // Bracketing
-                () -> docs().map(doc -> doc.bracket(2, Doc.lineOrEmpty(), Doc.text("["), Doc.text("]"))),
-                // Alternatives
-                () -> docs().map(Doc::group),
+                () -> docsWithParams().map(doc -> doc.bracket(2, Doc.lineOrEmpty(), Doc.text("["), Doc.text("]"))),
                 // Param
-                () -> Arbitraries.strings().map(Doc::param),
-                // Styled
-                () -> styles().array(Styles.StylesOperator[].class).flatMap(styles -> {
-                    return docs().map(doc -> doc.styled(styles));
-                })
+                () -> Arbitraries.strings().map(Doc::param)
         );
     }
 
-    String sgrCode(int code) {
-        return AnsiConstants.CSI + code + 'm';
+    @Provide
+    Arbitrary<Doc> docsWithSeparators() {
+       return Arbitraries.lazyOf(
+               // Text
+               // Repeated to reduce the frequency of recursive generation
+               () -> Arbitraries.strings().ofMaxLength(100).map(Doc::text),
+               () -> Arbitraries.strings().ofMaxLength(100).map(Doc::text),
+               () -> Arbitraries.strings().ofMaxLength(100).map(Doc::text),
+               () -> Arbitraries.strings().ofMaxLength(100).map(Doc::text),
+               () -> Arbitraries.strings().ofMaxLength(100).map(Doc::text),
+               // Empty
+               // Repeated to reduce the frequency of recursive generation
+               () -> Arbitraries.just(Doc.empty()),
+               () -> Arbitraries.just(Doc.empty()),
+               // Append
+               () -> docsWithSeparators().tuple2().map(tuple -> tuple.get1().append(tuple.get2())),
+               // Margin
+               () -> docsWithSeparators().tuple2().filter(tuple -> !tuple.get2().hasLineSeparators()).map(tuple -> tuple.get1().margin(tuple.get2())),
+               // Indent
+               () -> docsWithSeparators().map(doc -> doc.indent(2)),
+               // Alternatives
+               () -> docsWithSeparators().map(Doc::group),
+               // Styled
+               () -> docsWithSeparators().flatMap(doc -> styles().array(Styles.StylesOperator[].class).ofMaxSize(5).map(doc::styled)),
+               // Line
+               () -> Arbitraries.just(Doc.line()),
+               // LineOrSpace
+               () -> Arbitraries.just(Doc.lineOrSpace()),
+               // LineOrEmpty
+               () -> Arbitraries.just(Doc.lineOrEmpty()),
+               // LineOr
+               () -> Arbitraries.strings().ofMaxLength(10).map(Doc::lineOr),
+               () -> docsWithSeparators().map(Doc::lineOr),
+               // Bracketing
+               () -> docsWithSeparators().map(doc -> doc.bracket(2, Doc.lineOrEmpty(), Doc.text("["), Doc.text("]")))
+       );
+    }
+
+    @Provide
+    Arbitrary<Doc> docs() {
+        return Arbitraries.lazyOf(
+                // Text
+                // Repeated to reduce the frequency of recursive generation
+                () -> Arbitraries.strings().ofMaxLength(100).map(Doc::text),
+                () -> Arbitraries.strings().ofMaxLength(100).map(Doc::text),
+                () -> Arbitraries.strings().ofMaxLength(100).map(Doc::text),
+                () -> Arbitraries.strings().ofMaxLength(100).map(Doc::text),
+                () -> Arbitraries.strings().ofMaxLength(100).map(Doc::text),
+                // Empty
+                // Repeated to reduce the frequency of recursive generation
+                () -> Arbitraries.just(Doc.empty()),
+                () -> Arbitraries.just(Doc.empty()),
+                // Append
+                () -> docs().tuple2().map(tuple -> tuple.get1().append(tuple.get2())),
+                // Margin
+                () -> docs().tuple2().filter(tuple -> !tuple.get2().hasLineSeparators()).map(tuple -> tuple.get1().margin(tuple.get2())),
+                // Indent
+                () -> docs().map(doc -> doc.indent(2)),
+                // Alternatives
+                () -> docs().map(Doc::group),
+                // Styled
+                () -> docs().flatMap(doc -> styles().array(Styles.StylesOperator[].class).ofMaxSize(5).map(doc::styled))
+        );
+    }
+
+    String sgrCode(int ...codes) {
+        return Arrays.stream(codes)
+            .mapToObj(Integer::toString)
+            .collect(Collectors.joining(";", AnsiConstants.CSI, "m"));
     }
 
     String xtermFgCode(int code) {
-        return AnsiConstants.CSI + "38;5;" + code + 'm';
+        return sgrCode(38, 5, code);
     }
 
     String xtermBgCode(int code) {
-        return AnsiConstants.CSI + "48;5;" + code + 'm';
+        return sgrCode(48, 5, code);
     }
 
     String rgbFgCode(int r, int g, int b) {
-        return AnsiConstants.CSI + "38;2;" + r + ';' + g + ';' + b + 'm';
+        return sgrCode(38, 2, r, g, b);
     }
 
     String rgbBgCode(int r, int g, int b) {
-        return AnsiConstants.CSI + "48;2;" + r + ';' + g + ';' + b + 'm';
+        return sgrCode(48, 2, r, g, b);
     }
 }

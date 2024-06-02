@@ -59,7 +59,7 @@ public class Attrs {
     }
 
     public static String transition(long prev, long next) {
-        if (next == NULL) {
+        if (next <= EMPTY) {
             return isEmpty(prev) ? "" : AnsiConstants.RESET;
         }
 

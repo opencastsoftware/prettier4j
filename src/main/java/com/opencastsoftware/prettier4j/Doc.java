@@ -11,7 +11,6 @@ import com.opencastsoftware.prettier4j.ansi.Styles;
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.util.*;
-import java.util.AbstractMap.SimpleEntry;
 import java.util.function.BinaryOperator;
 import java.util.stream.Stream;
 
@@ -64,6 +63,14 @@ public abstract class Doc {
     abstract boolean hasParams();
 
     /**
+     * Indicate whether the current {@link Doc}
+     * contains any line separators.
+     *
+     * @return whether this {@link Doc} contains any line separators.
+     */
+    abstract boolean hasLineSeparators();
+
+    /**
      * Bind a named parameter to the {@link Doc} provided via {@code value}.
      *
      * @param name  the name of the parameter.
@@ -88,9 +95,9 @@ public abstract class Doc {
      */
     public Doc bind(Object... bindings) {
         if (bindings.length % 2 != 0) {
-           throw new IllegalArgumentException(
-                   "String-to-Doc pairs of arguments must be provided, but " +
-                           bindings.length + " arguments were found.");
+            throw new IllegalArgumentException(
+                    "String-to-Doc pairs of arguments must be provided, but " +
+                            bindings.length + " arguments were found.");
         }
 
         Map<String, Doc> bindingsMap = new HashMap<>();
@@ -133,6 +140,8 @@ public abstract class Doc {
      * @return the concatenated {@link Doc}.
      */
     public Doc append(Doc other) {
+        // By left unit law
+        if (other instanceof Empty) { return this; }
         return new Append(this, other);
     }
 
@@ -284,10 +293,46 @@ public abstract class Doc {
      * @return the bracketed document.
      */
     public Doc bracket(int indent, Doc lineDoc, Doc left, Doc right) {
+        return bracket(indent, lineDoc, empty(), left, right);
+    }
+
+    /**
+     * Bracket the current document by the {@code left} and {@code right} documents,
+     * indented by {@code indent} spaces, applying the margin document {@code margin}.
+     * <p>
+     * When collapsed, line separators are replaced by the {@code lineDoc}.
+     *
+     * @param indent    the number of spaces of indent to apply.
+     * @param lineDoc   the line separator document.
+     * @param marginDoc the margin document.
+     * @param left      the left-hand bracket document.
+     * @param right     the right-hand bracket document.
+     * @return the bracketed document.
+     */
+    public Doc bracket(int indent, Doc lineDoc, Doc marginDoc, Doc left, Doc right) {
         return group(
                 left
-                        .append(lineDoc.append(this).indent(indent))
+                        .append(lineDoc.append(this).indent(indent).margin(marginDoc))
                         .append(lineDoc.append(right)));
+    }
+
+    /**
+     * Apply the margin document {@code margin} to the current {@link Doc}, emitting the
+     * margin at the start of every new line from the start of this document until the
+     * end of the document.
+     * <p>
+     * Note that line separators are forbidden inside the margin document.
+     * <p>
+     * This is because each line separator causes the margin document to be produced.
+     * <p>
+     * If the margin document in turn contained a line separator, rendering would never terminate.
+     *
+     * @param margin the margin document to apply at the start of every line.
+     * @return a document which prefixes every new line with the {@code margin} document.
+     * @throws IllegalArgumentException if the margin document contains line separators.
+     */
+    public Doc margin(Doc margin) {
+        return margin(margin, this);
     }
 
     /**
@@ -298,7 +343,7 @@ public abstract class Doc {
      * @see Styles
      * @see com.opencastsoftware.prettier4j.ansi.Color Color
      */
-    public final Doc styled(Styles.StylesOperator...styles) {
+    public final Doc styled(Styles.StylesOperator... styles) {
         return styled(this, styles);
     }
 
@@ -349,7 +394,7 @@ public abstract class Doc {
      * Renders the current {@link Doc} into an {@link Appendable}, attempting to lay out the document
      * with at most {@code width} characters on each line.
      *
-     * @param width the preferred maximum rendering width.
+     * @param width  the preferred maximum rendering width.
      * @param output the output to render into.
      * @throws IOException if the {@link Appendable} {@code output} throws when {@link Appendable#append(CharSequence) append}ed.
      */
@@ -362,7 +407,7 @@ public abstract class Doc {
      * according to the rendering {@code options}.
      *
      * @param options the options to use for rendering.
-     * @param output the output to render into.
+     * @param output  the output to render into.
      * @throws IOException if the {@link Appendable} {@code output} throws when {@link Appendable#append(CharSequence) append}ed.
      */
     public void render(RenderOptions options, Appendable output) throws IOException {
@@ -384,12 +429,28 @@ public abstract class Doc {
         }
 
         @Override
+        public Doc append(Doc other) {
+            // By string concat equivalency law
+            if (other instanceof Text) {
+                Text otherText = (Text) other;
+                return text(this.text() + otherText.text());
+            }
+
+            return new Append(this, other);
+        }
+
+        @Override
         Doc flatten() {
             return this;
         }
 
         @Override
         boolean hasParams() {
+            return false;
+        }
+
+        @Override
+        boolean hasLineSeparators() {
             return false;
         }
 
@@ -462,6 +523,11 @@ public abstract class Doc {
         @Override
         boolean hasParams() {
             return left.hasParams() || right.hasParams();
+        }
+
+        @Override
+        boolean hasLineSeparators() {
+            return left.hasLineSeparators() || right.hasLineSeparators();
         }
 
         @Override
@@ -563,6 +629,11 @@ public abstract class Doc {
         }
 
         @Override
+        boolean hasLineSeparators() {
+            return left.hasLineSeparators() || right.hasLineSeparators();
+        }
+
+        @Override
         public Doc bind(String name, Doc value) {
             return new Alternatives(left.bind(name, value), right.bind(name, value));
         }
@@ -640,6 +711,11 @@ public abstract class Doc {
         }
 
         @Override
+        boolean hasLineSeparators() {
+            return doc.hasLineSeparators();
+        }
+
+        @Override
         public Doc bind(String name, Doc value) {
             return new Indent(indent, doc.bind(name, value));
         }
@@ -714,7 +790,9 @@ public abstract class Doc {
         }
     }
 
-    /** Represents a line break which can be flattened into an empty document. */
+    /**
+     * Represents a line break which can be flattened into an empty document.
+     */
     public static class LineOrEmpty extends LineOr {
         private static final LineOrEmpty INSTANCE = new LineOrEmpty();
 
@@ -798,6 +876,11 @@ public abstract class Doc {
         }
 
         @Override
+        boolean hasLineSeparators() {
+            return true;
+        }
+
+        @Override
         public Doc bind(String name, Doc value) {
             return new LineOr(altDoc.bind(name, value));
         }
@@ -853,6 +936,73 @@ public abstract class Doc {
     }
 
     /**
+     * Represents a {@link Doc} within which every new line is prefixed by a margin.
+     */
+    public static class Margin extends Doc {
+        private final Doc margin;
+        private final Doc doc;
+
+        protected Margin(Doc margin, Doc doc) {
+            this.margin = margin;
+            this.doc = doc;
+        }
+
+        public Doc margin() {
+            return margin;
+        }
+
+        public Doc doc() {
+            return doc;
+        }
+
+        @Override
+        Doc flatten() {
+            return new Margin(margin, doc.flatten());
+        }
+
+        @Override
+        boolean hasParams() {
+            return margin.hasParams() || doc.hasParams();
+        }
+
+        @Override
+        boolean hasLineSeparators() {
+            return margin.hasLineSeparators() || doc.hasLineSeparators();
+        }
+
+        @Override
+        public Doc bind(String name, Doc value) {
+            return new Margin(margin.bind(name, value), doc.bind(name, value));
+        }
+
+        @Override
+        public Doc bind(Map<String, Doc> bindings) {
+            return new Margin(margin.bind(bindings), doc.bind(bindings));
+        }
+
+        @Override
+        public boolean equals(Object o) {
+            if (this == o) return true;
+            if (o == null || getClass() != o.getClass()) return false;
+            Margin margin1 = (Margin) o;
+            return Objects.equals(margin, margin1.margin) && Objects.equals(doc, margin1.doc);
+        }
+
+        @Override
+        public int hashCode() {
+            return Objects.hash(margin, doc);
+        }
+
+        @Override
+        public String toString() {
+            return "Margin[" +
+                    "margin=" + margin +
+                    ", doc=" + doc +
+                    ']';
+        }
+    }
+
+    /**
      * Represents an empty {@link Doc}.
      */
     public static class Empty extends Doc {
@@ -866,12 +1016,23 @@ public abstract class Doc {
         }
 
         @Override
+        public Doc append(Doc other) {
+            // By right unit law
+            return other;
+        }
+
+        @Override
         Doc flatten() {
             return this;
         }
 
         @Override
         boolean hasParams() {
+            return false;
+        }
+
+        @Override
+        boolean hasLineSeparators() {
             return false;
         }
 
@@ -919,6 +1080,11 @@ public abstract class Doc {
         @Override
         boolean hasParams() {
             return doc.hasParams();
+        }
+
+        @Override
+        boolean hasLineSeparators() {
+            return doc.hasLineSeparators();
         }
 
         @Override
@@ -978,6 +1144,11 @@ public abstract class Doc {
         }
 
         @Override
+        boolean hasLineSeparators() {
+            return false;
+        }
+
+        @Override
         public Doc bind(String name, Doc value) {
             return this;
         }
@@ -1032,6 +1203,11 @@ public abstract class Doc {
         }
 
         @Override
+        boolean hasLineSeparators() {
+            return false;
+        }
+
+        @Override
         public Doc bind(String name, Doc value) {
             return this;
         }
@@ -1078,9 +1254,14 @@ public abstract class Doc {
         }
 
         @Override
+        boolean hasLineSeparators() {
+            return false;
+        }
+
+        @Override
         public Doc bind(String name, Doc value) {
             if (this.name.equals(name)) {
-               return flattened ? value.flatten() : value;
+                return flattened ? value.flatten() : value;
             } else {
                 return this;
             }
@@ -1125,6 +1306,8 @@ public abstract class Doc {
      * @return a {@link Doc Doc} representing that {@link String}.
      */
     public static Doc text(String text) {
+        // By empty text equivalency law
+        if (text.isEmpty()) { return empty(); }
         return new Text(text);
     }
 
@@ -1147,7 +1330,42 @@ public abstract class Doc {
      * @return the indented document.
      */
     public static Doc indent(int indent, Doc doc) {
+        // By zero indent equivalency law
+        if (indent == 0) { return doc; }
         return new Indent(indent, doc);
+    }
+
+    /**
+     * Apply the margin document {@code margin} to the current {@link Doc}, emitting the
+     * margin at the start of every new line from the start of this document until the
+     * end of the document.
+     * <p>
+     * Note that line separators are forbidden inside the margin document.
+     * <p>
+     * This is because each line separator causes the margin document to be produced.
+     * <p>
+     * If the margin document in turn contained a line separator, rendering would never terminate.
+     *
+     * @param margin the margin document to apply at the start of every line.
+     * @param doc the input document.
+     * @return a document which prefixes every new line with the {@code margin} document.
+     * @throws IllegalArgumentException if the margin document contains line separators.
+     */
+    public static Doc margin(Doc margin, Doc doc) {
+        // By empty margin equivalency law
+        if (margin instanceof Empty) {
+            return doc;
+        }
+        if (margin.hasLineSeparators()) {
+            throw new IllegalArgumentException("The margin document contains line separators.");
+        }
+        // By nested margin concat law
+        if (doc instanceof Margin) {
+            Margin marginDoc = (Margin) doc;
+            return new Margin(margin.append(marginDoc.margin()), marginDoc.doc());
+        } else {
+            return new Margin(margin, doc);
+        }
     }
 
     /**
@@ -1192,7 +1410,7 @@ public abstract class Doc {
      *
      * @param altDoc the alternative document to use if the line break is flattened.
      * @return a {@link Doc} representing a line break which may be flattened into
-               an alternative document {@code altDoc}.
+     * an alternative document {@code altDoc}.
      */
     public static Doc lineOr(Doc altDoc) {
         return new LineOr(altDoc);
@@ -1204,7 +1422,7 @@ public abstract class Doc {
      *
      * @param altText the alternative text to use if the line break is flattened.
      * @return a {@link Doc} representing a line break which may be flattened into
-     *         the alternative text {@code altText}.
+     * the alternative text {@code altText}.
      */
     public static Doc lineOr(String altText) {
         return new LineOr(text(altText));
@@ -1213,19 +1431,22 @@ public abstract class Doc {
     /**
      * Styles the input {@link Doc} using the styles provided via {@code styles}.
      *
-     * @param doc the input document.
+     * @param doc    the input document.
      * @param styles the styles to use to decorate the input {@code doc}.
      * @return a {@link Doc} decorated with the ANSI styles provided.
      * @see Styles
      * @see com.opencastsoftware.prettier4j.ansi.Color Color
      */
-    public static Doc styled(Doc doc, Styles.StylesOperator ...styles) {
+    public static Doc styled(Doc doc, Styles.StylesOperator... styles) {
+        // By empty styles equivalency law
+        if (styles.length == 0) { return doc; }
         return new Styled(doc, styles);
     }
 
     /**
      * Creates a {@link Doc} which acts as a placeholder for an argument {@link Doc} that will be provided
      * by {@link Doc#bind(String, Doc) binding} parameters prior to {@link Doc#render(int) render}ing.
+     *
      * @param name the name of the parameter.
      * @return a parameter {@link Doc}.
      */
@@ -1239,8 +1460,7 @@ public abstract class Doc {
      *
      * @param documents the collection of documents.
      * @param fn        the binary operator for combining documents.
-     * @return a document built by reducing the {@code documents} using the operator
-     *         {@code fn}.
+     * @return a document built by reducing the {@code documents} using the operator {@code fn}.
      */
     public static Doc fold(Collection<Doc> documents, BinaryOperator<Doc> fn) {
         return fold(documents.stream(), fn);
@@ -1252,8 +1472,7 @@ public abstract class Doc {
      *
      * @param documents the stream of documents.
      * @param fn        the binary operator for combining documents.
-     * @return a document built by reducing the {@code documents} using the operator
-     *         {@code fn}.
+     * @return a document built by reducing the {@code documents} using the operator {@code fn}.
      */
     public static Doc fold(Stream<Doc> documents, BinaryOperator<Doc> fn) {
         return documents.reduce(fn).orElse(Doc.empty());
@@ -1266,7 +1485,7 @@ public abstract class Doc {
      * @param separator the separator document.
      * @param documents the collection of documents.
      * @return a document containing the concatenation of {@code documents}
-     *         separated by the {@code separator}.
+     * separated by the {@code separator}.
      */
     public static Doc intersperse(Doc separator, Collection<Doc> documents) {
         return intersperse(separator, documents.stream());
@@ -1279,7 +1498,7 @@ public abstract class Doc {
      * @param separator the separator document.
      * @param documents the stream of documents.
      * @return a document containing the concatenation of {@code documents}
-     *         separated by the {@code separator}.
+     * separated by the {@code separator}.
      */
     public static Doc intersperse(Doc separator, Stream<Doc> documents) {
         return Doc.fold(documents, (left, right) -> {
@@ -1297,6 +1516,56 @@ public abstract class Doc {
         return alternatives(doc.flatten(), doc);
     }
 
+    private static class Entry {
+        private final int indent;
+        private final Doc margin;
+        private final Doc doc;
+
+        private Entry(int indent, Doc margin, Doc doc) {
+            this.indent = indent;
+            this.margin = margin;
+            this.doc = doc;
+        }
+
+        int indent() {
+            return indent;
+        }
+
+        Doc margin() {
+            return margin;
+        }
+
+        Doc doc() {
+            return doc;
+        }
+
+        @Override
+        public boolean equals(Object o) {
+            if (this == o) return true;
+            if (o == null || getClass() != o.getClass()) return false;
+            Entry entry = (Entry) o;
+            return indent == entry.indent && Objects.equals(margin, entry.margin) && Objects.equals(doc, entry.doc);
+        }
+
+        @Override
+        public int hashCode() {
+            return Objects.hash(indent, margin, doc);
+        }
+
+        @Override
+        public String toString() {
+            return "Entry[" +
+                    "indent=" + indent +
+                    ", margin=" + margin +
+                    ", doc=" + doc +
+                    ']';
+        }
+    }
+
+    private static Entry entry(int indent, Doc margin, Doc doc) {
+        return new Entry(indent, margin, doc);
+    }
+
     /**
      * Inspects the remaining space on the current line and the entries in the
      * current layout to see whether they fit onto the current line.
@@ -1306,14 +1575,14 @@ public abstract class Doc {
      * @param remaining the remaining space on the current line.
      * @param entries   the entries we'd like to fit onto this line
      * @return true if we can fit all {@link Doc.Text entries} up to the
-     *         next line break into the remaining characters of the current line.
+     * next line break into the remaining characters of the current line.
      */
-    static boolean fits(int remaining, Deque<Map.Entry<Integer, Doc>> entries) {
+    static boolean fits(int remaining, Deque<Entry> entries) {
         if (remaining < 0)
             return false;
 
-        for (Map.Entry<Integer, Doc> entry : entries) {
-            Doc entryDoc = entry.getValue();
+        for (Entry entry : entries) {
+            Doc entryDoc = entry.doc();
 
             // normalization reduces Doc to Text, LineOr, Escape and Reset
             if (entryDoc instanceof Text) {
@@ -1323,7 +1592,7 @@ public abstract class Doc {
                     return false;
             } else if (entryDoc instanceof LineOr) {
                 return true;
-            } // No need to handle Escape or Reset here
+            } // No need to handle Escape or Reset as they are effectively zero-length
         }
 
         return true;
@@ -1337,80 +1606,89 @@ public abstract class Doc {
      * @param left     the preferred compact layout.
      * @param right    the expanded layout.
      * @param options  the options to use for rendering.
+     * @param margin   the current margin.
      * @param indent   the current indentation level.
      * @param position the position in the current line.
      * @return the entries of the chosen layout.
      */
-    static Deque<Map.Entry<Integer, Doc>> chooseLayout(Doc left, Doc right, RenderOptions options, int indent, int position) {
-        Deque<Map.Entry<Integer, Doc>> leftEntries = normalize(left, options, indent, position);
+    static Deque<Entry> chooseLayout(Doc left, Doc right, RenderOptions options, Doc margin, int indent, int position) {
+        Deque<Entry> leftEntries = normalize(left, options, margin, indent, position);
 
         int remaining = options.lineWidth() - position;
 
         if (fits(remaining, leftEntries)) {
             return leftEntries;
         } else {
-            return normalize(right, options, indent, position);
+            return normalize(right, options, margin, indent, position);
         }
     }
 
     /**
-     * Traverse the input {@code doc} recursively, eliminating all nodes except for
-     * {@link Doc.Text Text} and subtypes of {@link Doc.LineOr LineOr}, and producing a
-     * queue of entries to be rendered.
+     * Traverses the input {@code doc} recursively, eliminating all nodes except for
+     * {@link Text}, {@link Escape}, {@link Reset} and subtypes of {@link LineOr},
+     * and produces a queue of entries to be rendered.
      *
      * @param doc      the document to be rendered.
      * @param options  the options to use for rendering.
+     * @param margin   the current margin.
      * @param indent   the current indentation level.
      * @param position the current position in the line.
      * @return a queue of entries to be rendered.
      */
-    static Deque<Map.Entry<Integer, Doc>> normalize(Doc doc, RenderOptions options, int indent, int position) {
+    static Deque<Entry> normalize(Doc doc, RenderOptions options, Doc margin, int indent, int position) {
         // Not yet normalized entries
-        Deque<Map.Entry<Integer, Doc>> inQueue = new ArrayDeque<>();
+        Deque<Entry> inQueue = new ArrayDeque<>();
 
         // Normalized entries
-        Deque<Map.Entry<Integer, Doc>> outQueue = new ArrayDeque<>();
+        Deque<Entry> outQueue = new ArrayDeque<>();
 
         // Start with the outer Doc
-        inQueue.add(new SimpleEntry<>(indent, doc));
+        inQueue.add(entry(indent, margin, doc));
 
         while (!inQueue.isEmpty()) {
-            Map.Entry<Integer, Doc> topEntry = inQueue.removeFirst();
+            Entry topEntry = inQueue.removeFirst();
 
-            int entryIndent = topEntry.getKey();
-            Doc entryDoc = topEntry.getValue();
+            int entryIndent = topEntry.indent();
+            Doc entryMargin = topEntry.margin();
+            Doc entryDoc = topEntry.doc();
 
             if (entryDoc instanceof Append) {
                 // Eliminate Append
                 Append appendDoc = (Append) entryDoc;
                 // Note reverse order
-                inQueue.addFirst(new SimpleEntry<>(entryIndent, appendDoc.right()));
-                inQueue.addFirst(new SimpleEntry<>(entryIndent, appendDoc.left()));
+                inQueue.addFirst(entry(entryIndent, entryMargin, appendDoc.right()));
+                inQueue.addFirst(entry(entryIndent, entryMargin, appendDoc.left()));
             } else if (entryDoc instanceof Styled) {
                 // Eliminate Styled
                 Styled styledDoc = (Styled) entryDoc;
                 if (options.emitAnsiEscapes()) {
                     // Note reverse order
-                    inQueue.addFirst(new SimpleEntry<>(entryIndent, Reset.getInstance()));
-                    inQueue.addFirst(new SimpleEntry<>(entryIndent, styledDoc.doc()));
-                    inQueue.addFirst(new SimpleEntry<>(entryIndent, new Escape(styledDoc.styles())));
+                    inQueue.addFirst(entry(entryIndent, entryMargin, Reset.getInstance()));
+                    inQueue.addFirst(entry(entryIndent, entryMargin, styledDoc.doc()));
+                    inQueue.addFirst(entry(entryIndent, entryMargin, new Escape(styledDoc.styles())));
                 } else {
                     // Ignore styles and emit the underlying Doc
-                    inQueue.addFirst(new SimpleEntry<>(entryIndent, styledDoc.doc()));
+                    inQueue.addFirst(entry(entryIndent, entryMargin, styledDoc.doc()));
                 }
             } else if (entryDoc instanceof Indent) {
                 // Eliminate Indent
                 Indent indentDoc = (Indent) entryDoc;
                 int newIndent = entryIndent + indentDoc.indent();
-                inQueue.addFirst(new SimpleEntry<>(newIndent, indentDoc.doc()));
+                inQueue.addFirst(entry(newIndent, entryMargin, indentDoc.doc()));
+            } else if (entryDoc instanceof Margin) {
+                // Eliminate Margin
+                Margin marginDoc = (Margin) entryDoc;
+                // Note reverse order
+                Doc newMargin = entryMargin.append(marginDoc.margin());
+                inQueue.addFirst(entry(entryIndent, newMargin, marginDoc.doc()));
             } else if (entryDoc instanceof Alternatives) {
                 // Eliminate Alternatives
                 Alternatives altDoc = (Alternatives) entryDoc;
                 // These entries are already normalized
-                Deque<Map.Entry<Integer, Doc>> chosenEntries = chooseLayout(
-                        altDoc.left(), altDoc.right(), options, entryIndent, position);
-                // Note reverse order
-                chosenEntries.descendingIterator().forEachRemaining(inQueue::addFirst);
+                Deque<Entry> chosenEntries = chooseLayout(
+                        altDoc.left(), altDoc.right(),
+                        options, entryMargin, entryIndent, position);
+                chosenEntries.forEach(outQueue::addLast);
             } else if (entryDoc instanceof Text) {
                 Text textDoc = (Text) entryDoc;
                 // Keep track of line length
@@ -1419,6 +1697,16 @@ public abstract class Doc {
             } else if (entryDoc instanceof LineOr) {
                 // Reset line length
                 position = entryIndent;
+                // Note reverse order
+                if (entryIndent > 0) {
+                    // Send out the indent spaces
+                    char[] indentChars = new char[entryIndent];
+                    Arrays.fill(indentChars, ' ');
+                    String indentSpaces = new String(indentChars);
+                    inQueue.addFirst(entry(entryIndent, entryMargin, text(indentSpaces)));
+                }
+                // Send out the current margin
+                inQueue.addFirst(entry(entryIndent, entryMargin, entryMargin));
                 outQueue.addLast(topEntry);
             } else if (entryDoc instanceof Escape) {
                 outQueue.addLast(topEntry);
@@ -1443,12 +1731,11 @@ public abstract class Doc {
     public static void render(Doc doc, RenderOptions options, Appendable output) throws IOException {
         if (doc.hasParams()) { throw new IllegalStateException("This Doc contains unbound parameters"); }
 
-        Deque<Map.Entry<Integer, Doc>> renderQueue = normalize(doc, options, 0, 0);
+        Deque<Entry> renderQueue = normalize(doc, options, empty(), 0, 0);
         AttrsStack attrsStack = new AttrsStack();
 
-        for (Map.Entry<Integer, Doc> entry : renderQueue) {
-            int entryIndent = entry.getKey();
-            Doc entryDoc = entry.getValue();
+        for (Entry entry : renderQueue) {
+            Doc entryDoc = entry.doc();
 
             // normalization reduces Doc to Text, LineOr, Escape and Reset
             if (entryDoc instanceof Text) {
@@ -1456,9 +1743,6 @@ public abstract class Doc {
                 output.append(textDoc.text());
             } else if (entryDoc instanceof LineOr) {
                 output.append(System.lineSeparator());
-                for (int i = 0; i < entryIndent; i++) {
-                    output.append(' ');
-                }
             } else if (entryDoc instanceof Reset) {
                 long resetAttrs = attrsStack.popLast();
                 long prevAttrs = attrsStack.peekLast();
@@ -1478,8 +1762,8 @@ public abstract class Doc {
      * Renders the input {@link Doc} into an {@link Appendable}, attempting to lay out the document
      * according to the {@link RenderOptions#defaults() default} rendering options.
      *
-     * @param doc     the document to be rendered.
-     * @param output  the output to render into.
+     * @param doc    the document to be rendered.
+     * @param output the output to render into.
      * @throws IOException if the {@link Appendable} {@code output} throws when {@link Appendable#append(CharSequence) append}ed.
      */
     public static void render(Doc doc, Appendable output) throws IOException {
