@@ -213,6 +213,13 @@ public class DocTest {
     }
 
     @Test
+    void testMarginWithLineSeparator() {
+        assertThrows(IllegalArgumentException.class, () -> {
+            text("bla").margin(lineOrSpace());
+        });
+    }
+
+    @Test
     void testMargin() {
         String expected = "\n|functionCall(\n|  a,\n|  b,\n|  c\n|)";
 
