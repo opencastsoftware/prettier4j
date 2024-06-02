@@ -1456,7 +1456,7 @@ public class DocTest {
         EqualsVerifier
                 .forClasses(
                         Text.class, Append.class, Param.class,
-                        Alternatives.class, Indent.class,
+                        Alternatives.class, Indent.class, Margin.class,
                         LineOr.class, Escape.class, Styled.class)
                 .usingGetClass()
                 .withPrefabValues(Doc.class, left, right)
@@ -1467,7 +1467,7 @@ public class DocTest {
     void testToString() {
         ToStringVerifier
                 .forClasses(
-                        Text.class, Append.class,
+                        Text.class, Append.class, Margin.class,
                         Alternatives.class, Indent.class,
                         LineOr.class, Empty.class, Escape.class,
                         Reset.class, Styled.class, Param.class)
