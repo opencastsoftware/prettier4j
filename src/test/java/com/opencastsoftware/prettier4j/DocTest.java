@@ -1449,6 +1449,16 @@ public class DocTest {
     }
 
     @Test
+    void testEntryEquals() {
+        EqualsVerifier.forClass(Entry.class).usingGetClass().verify();
+    }
+
+    @Test
+    void testEntryToString() {
+        ToStringVerifier.forClass(Entry.class).verify();
+    }
+
+    @Test
     void testEquals() {
         Doc left = docsWithParams().sample();
 

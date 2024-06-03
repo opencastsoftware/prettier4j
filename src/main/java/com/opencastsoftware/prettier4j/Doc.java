@@ -1516,7 +1516,7 @@ public abstract class Doc {
         return alternatives(doc.flatten(), doc);
     }
 
-    private static class Entry {
+    static final class Entry {
         private final int indent;
         private final Doc margin;
         private final Doc doc;
@@ -1562,7 +1562,7 @@ public abstract class Doc {
         }
     }
 
-    private static Entry entry(int indent, Doc margin, Doc doc) {
+    static Entry entry(int indent, Doc margin, Doc doc) {
         return new Entry(indent, margin, doc);
     }
 
