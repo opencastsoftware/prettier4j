@@ -11,6 +11,7 @@ import com.opencastsoftware.prettier4j.ansi.Styles;
 import net.jqwik.api.*;
 import net.jqwik.api.constraints.IntRange;
 import nl.jqno.equalsverifier.EqualsVerifier;
+import org.apache.commons.text.WordUtils;
 import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
@@ -1448,6 +1449,16 @@ public class DocTest {
         assertThat(parameterized, is(equalTo(inlined)));
     }
 
+    @Property
+    void wrapTextEquivalentToApacheTextWrap(
+            @ForAll @IntRange(min = 10, max = 200) int width,
+            @ForAll("wrappableText") String textToWrap
+    ) {
+        String textWrapWithPrettier = new WrapText(textToWrap).render(width);
+        String textWrapWithApache = WordUtils.wrap(textToWrap, width, null, false, "\\s+");
+        assertThat(textWrapWithPrettier, is(equalTo(textWrapWithApache.strip().replaceAll("[\t\r\f\u000b]", " "))));
+    }
+
     @Test
     void testEntryEquals() {
         EqualsVerifier.forClass(Entry.class).usingGetClass().verify();
@@ -1495,6 +1506,27 @@ public class DocTest {
                 .forClasses(Line.class, LineOrSpace.class, LineOrEmpty.class)
                 .withIgnoredFields("altDoc")
                 .verify();
+    }
+
+    Arbitrary<String> words() {
+        return Arbitraries.strings()
+                .ofMinLength(1)
+                .ofMaxLength(20)
+                .alpha()
+                .numeric();
+    }
+
+    Arbitrary<String> spaces() {
+        return Arbitraries.strings()
+                .ofMaxLength(1)
+                .whitespace();
+    }
+
+    @Provide
+    Arbitrary<String> wrappableText() {
+        return words().stream()
+                .ofMaxSize(100)
+                .map(words -> words.collect(Collectors.joining(" ")));
     }
 
     @Provide
