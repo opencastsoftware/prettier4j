@@ -495,6 +495,10 @@ public abstract class Doc {
         }
     }
 
+    /**
+     * Represents a long text string which may be wrapped to fit within
+     * the preferred rendering width.
+     */
     public static class WrapText extends Doc {
         private final String text;
 
