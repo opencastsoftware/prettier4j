@@ -23,6 +23,7 @@ testing {
                     implementation(libs.hamcrest)
                     implementation(libs.equalsVerifier)
                     implementation(libs.toStringVerifier)
+                    implementation(libs.apacheCommonsText)
                 }
             }
     }
@@ -73,7 +74,7 @@ mavenPublishing {
     }
 }
 
-tasks.withType<JavaCompile> {
+tasks.compileJava {
     // Target Java 8
     options.release.set(8)
 }

@@ -496,6 +496,68 @@ public abstract class Doc {
     }
 
     /**
+     * Represents a long text string which may be wrapped to fit within
+     * the preferred rendering width.
+     */
+    public static class WrapText extends Doc {
+        private final String text;
+
+        WrapText(String text) {
+            this.text = text;
+        }
+
+        public String text() {
+            return text;
+        }
+
+        @Override
+        Doc flatten() {
+            return this;
+        }
+
+        @Override
+        boolean hasParams() {
+            return false;
+        }
+
+        @Override
+        boolean hasLineSeparators() {
+            return false;
+        }
+
+        @Override
+        public Doc bind(String name, Doc value) {
+            return this;
+        }
+
+        @Override
+        public Doc bind(Map<String, Doc> bindings) {
+            return this;
+        }
+
+        @Override
+        public boolean equals(Object o) {
+            if (this == o) return true;
+            if (o == null || getClass() != o.getClass()) return false;
+            WrapText wrapText = (WrapText) o;
+            return Objects.equals(text, wrapText.text);
+        }
+
+        @Override
+        public int hashCode() {
+            return Objects.hashCode(text);
+        }
+
+        @Override
+        public String toString() {
+            return "WrapText{" +
+                    "text='" + text + '\'' +
+                    '}';
+        }
+
+    }
+
+    /**
      * Represents the concatenation of two {@link Doc}s.
      */
     public static class Append extends Doc {
@@ -1312,6 +1374,19 @@ public abstract class Doc {
     }
 
     /**
+     * Construct a {@link Doc} which attempts to wrap the input {@code text}
+     * to fit within the preferred rendering width.
+     *
+     * @param text the input String.
+     * @return a {@link Doc Doc} representing that {@link String}.
+     */
+    public static Doc wrapText(String text) {
+        // By empty text equivalency law
+        if (text.isEmpty()) { return empty(); }
+        return new WrapText(text);
+    }
+
+    /**
      * Construct a {@link Doc Doc} representing two alternative layouts for a document.
      *
      * @param left  the flattened layout for the document.
@@ -1689,6 +1764,71 @@ public abstract class Doc {
                         altDoc.left(), altDoc.right(),
                         options, entryMargin, entryIndent, position);
                 chosenEntries.forEach(outQueue::addLast);
+            } else if (entryDoc instanceof WrapText) {
+                WrapText wrapDoc = (WrapText) entryDoc;
+                String wrapText = wrapDoc.text();
+                int textLength = wrapText.length();
+                if (textLength == 0) { continue; }
+
+                StringBuilder wrapped = new StringBuilder(options.lineWidth());
+
+                int textOffset = 0;
+                int wordStart = -1;
+                for (; textOffset < textLength; textOffset++) {
+                    char currentChar = wrapText.charAt(textOffset);
+
+                    boolean isInWord = wordStart >= 0;
+                    boolean isWhitespace = Character.isWhitespace(currentChar);
+                    boolean isStartOfWord = !isWhitespace && !isInWord;
+
+                    if (isStartOfWord) {
+                        wordStart = textOffset;
+                        isInWord = true;
+                    }
+
+                    boolean isLastChar = textOffset == textLength - 1;
+                    boolean isEndOfWord = (isWhitespace || isLastChar) && isInWord;
+                    boolean isFirstWord = wrapped.length() == 0;
+
+                    if (isEndOfWord) {
+                        int precedingSpaces = isFirstWord ? 0 : 1;
+                        int wordEnd = isLastChar ? textLength : textOffset;
+                        int wordLength = wordEnd - wordStart + precedingSpaces;
+                        int remaining = options.lineWidth() - position;
+                        if (remaining < wordLength) {
+                            if (isFirstWord) {
+                                // It's a really long word, so send it out to make progress
+                                wrapped.append(wrapText, wordStart, wordEnd);
+                                position += wordLength;
+                                wordStart = -1;
+                            }
+                            if (!isLastChar) break;
+                        } else {
+                            if (!isFirstWord) { wrapped.append(' '); }
+                            wrapped.append(wrapText, wordStart, wordEnd);
+                            position += wordLength;
+                            wordStart = -1;
+                        }
+                    }
+                }
+
+                // Skip trailing whitespace
+                while (textOffset < textLength && Character.isWhitespace(wrapText.charAt(textOffset))) {
+                    textOffset++;
+                }
+
+                int restOffset = wordStart > 0 ? wordStart : textOffset;
+                int remainingChars = textLength - restOffset;
+                if (remainingChars > 0) {
+                    // Send out remainder prefixed by line separator
+                    String remainingText = wrapText.substring(restOffset);
+                    inQueue.addFirst(entry(entryIndent, entryMargin, wrapText(remainingText)));
+                    inQueue.addFirst(entry(entryIndent, entryMargin, line()));
+                }
+
+                // Send out the wrapped line
+                inQueue.addFirst(entry(entryIndent, entryMargin, text(wrapped.toString())));
+
             } else if (entryDoc instanceof Text) {
                 Text textDoc = (Text) entryDoc;
                 // Keep track of line length

@@ -9,8 +9,10 @@ import com.opencastsoftware.prettier4j.ansi.AnsiConstants;
 import com.opencastsoftware.prettier4j.ansi.Color;
 import com.opencastsoftware.prettier4j.ansi.Styles;
 import net.jqwik.api.*;
+import net.jqwik.api.arbitraries.ArrayArbitrary;
 import net.jqwik.api.constraints.IntRange;
 import nl.jqno.equalsverifier.EqualsVerifier;
+import org.apache.commons.text.WordUtils;
 import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
@@ -1222,6 +1224,13 @@ public class DocTest {
         assertThat(emptyText, is(equalTo(emptyDoc)));
     }
 
+    @Property
+    void emptyEquivalentToEmptyWrapText(@ForAll @IntRange(min = 5, max = 200) int width) {
+        String emptyText = wrapText("").render(width);
+        String emptyDoc = Doc.empty().render(width);
+        assertThat(emptyText, is(equalTo(emptyDoc)));
+    }
+
     /**
      * This property corresponds to the original paper's law:
      *
@@ -1320,8 +1329,8 @@ public class DocTest {
     void nestedMarginEquivalentToAppendMargin(
             @ForAll @IntRange(min = 5, max = 200) int width,
             @ForAll("docsWithSeparators") Doc doc,
-            @ForAll("docs") Doc margin1,
-            @ForAll("docs") Doc margin2) {
+            @ForAll("marginDocs") Doc margin1,
+            @ForAll("marginDocs") Doc margin2) {
         String appendMargin = doc.margin(margin1.append(margin2)).render(width);
         String nestedMargin = doc.margin(margin2).margin(margin1).render(width);
         assertThat(nestedMargin, is(equalTo(appendMargin)));
@@ -1448,6 +1457,16 @@ public class DocTest {
         assertThat(parameterized, is(equalTo(inlined)));
     }
 
+    @Property
+    void wrapTextEquivalentToApacheTextWrap(
+            @ForAll @IntRange(min = 10, max = 200) int width,
+            @ForAll("wrappableText") String textToWrap
+    ) {
+        String textWrapWithPrettier = new WrapText(textToWrap).render(width);
+        String textWrapWithApache = WordUtils.wrap(textToWrap, width, null, false, "\\s+");
+        assertThat(textWrapWithPrettier, is(equalTo(textWrapWithApache.strip().replaceAll("[\t\r\f\u000b]", " "))));
+    }
+
     @Test
     void testEntryEquals() {
         EqualsVerifier.forClass(Entry.class).usingGetClass().verify();
@@ -1472,7 +1491,7 @@ public class DocTest {
         // those prefab values must not be equal to each other
         EqualsVerifier
                 .forClasses(
-                        Text.class, Append.class, Param.class,
+                        Text.class, Append.class, Param.class, WrapText.class,
                         Alternatives.class, Indent.class, Margin.class,
                         LineOr.class, Escape.class, Styled.class)
                 .usingGetClass()
@@ -1485,7 +1504,7 @@ public class DocTest {
         ToStringVerifier
                 .forClasses(
                         Text.class, Append.class, Margin.class,
-                        Alternatives.class, Indent.class,
+                        WrapText.class, Alternatives.class, Indent.class,
                         LineOr.class, Empty.class, Escape.class,
                         Reset.class, Styled.class, Param.class)
                 .withPrefabValue(Doc.class, docsWithParams().sample())
@@ -1495,6 +1514,21 @@ public class DocTest {
                 .forClasses(Line.class, LineOrSpace.class, LineOrEmpty.class)
                 .withIgnoredFields("altDoc")
                 .verify();
+    }
+
+    Arbitrary<String> words() {
+        return Arbitraries.strings()
+                .ofMinLength(1)
+                .ofMaxLength(10)
+                .alpha()
+                .numeric();
+    }
+
+    @Provide
+    Arbitrary<String> wrappableText() {
+        return words().stream()
+                .ofMaxSize(100)
+                .map(words -> words.collect(Collectors.joining(" ")));
     }
 
     @Provide
@@ -1560,11 +1594,13 @@ public class DocTest {
         return Arbitraries.lazyOf(
                 // Text
                 // Repeated to reduce the frequency of recursive generation
-                () -> Arbitraries.strings().ofMaxLength(100).map(Doc::text),
-                () -> Arbitraries.strings().ofMaxLength(100).map(Doc::text),
-                () -> Arbitraries.strings().ofMaxLength(100).map(Doc::text),
-                () -> Arbitraries.strings().ofMaxLength(100).map(Doc::text),
-                () -> Arbitraries.strings().ofMaxLength(100).map(Doc::text),
+                () -> Arbitraries.strings().ofMaxLength(10).map(Doc::text),
+                () -> Arbitraries.strings().ofMaxLength(10).map(Doc::text),
+                () -> Arbitraries.strings().ofMaxLength(10).map(Doc::text),
+                () -> Arbitraries.strings().ofMaxLength(10).map(Doc::text),
+                () -> Arbitraries.strings().ofMaxLength(10).map(Doc::text),
+                // WrapText
+                () -> wrappableText().map(WrapText::new),
                 // Empty
                 // Repeated to reduce the frequency of recursive generation
                 () -> Arbitraries.just(Doc.empty()),
@@ -1572,13 +1608,13 @@ public class DocTest {
                 // Append
                 () -> docsWithParams().tuple2().map(tuple -> tuple.get1().append(tuple.get2())),
                 // Margin
-                () -> docsWithParams().tuple2().filter(tuple -> !tuple.get2().hasLineSeparators()).map(tuple -> tuple.get1().margin(tuple.get2())),
+                () -> Combinators.combine(docs(), marginDocs()).as((doc, margin) -> doc.margin(margin)),
                 // Indent
                 () -> docsWithParams().map(doc -> doc.indent(2)),
                 // Alternatives
                 () -> docsWithParams().map(Doc::group),
                 // Styled
-                () -> docsWithParams().flatMap(doc -> styles().array(Styles.StylesOperator[].class).ofMaxSize(5).map(doc::styled)),
+                () -> Combinators.combine(docsWithParams(), docStyles()).as((doc, styles) -> doc.styled(styles)),
                 // Line
                 () -> Arbitraries.just(Doc.line()),
                 // LineOrSpace
@@ -1586,7 +1622,7 @@ public class DocTest {
                 // LineOrEmpty
                 () -> Arbitraries.just(Doc.lineOrEmpty()),
                 // LineOr
-                () -> Arbitraries.strings().ofMaxLength(10).map(Doc::lineOr),
+                () -> Arbitraries.strings().ofMaxLength(5).map(Doc::lineOr),
                 () -> docsWithParams().map(Doc::lineOr),
                 // Bracketing
                 () -> docsWithParams().map(doc -> doc.bracket(2, Doc.lineOrEmpty(), Doc.text("["), Doc.text("]"))),
@@ -1600,11 +1636,13 @@ public class DocTest {
        return Arbitraries.lazyOf(
                // Text
                // Repeated to reduce the frequency of recursive generation
-               () -> Arbitraries.strings().ofMaxLength(100).map(Doc::text),
-               () -> Arbitraries.strings().ofMaxLength(100).map(Doc::text),
-               () -> Arbitraries.strings().ofMaxLength(100).map(Doc::text),
-               () -> Arbitraries.strings().ofMaxLength(100).map(Doc::text),
-               () -> Arbitraries.strings().ofMaxLength(100).map(Doc::text),
+               () -> Arbitraries.strings().ofMaxLength(10).map(Doc::text),
+               () -> Arbitraries.strings().ofMaxLength(10).map(Doc::text),
+               () -> Arbitraries.strings().ofMaxLength(10).map(Doc::text),
+               () -> Arbitraries.strings().ofMaxLength(10).map(Doc::text),
+               () -> Arbitraries.strings().ofMaxLength(10).map(Doc::text),
+               // WrapText
+               () -> wrappableText().map(WrapText::new),
                // Empty
                // Repeated to reduce the frequency of recursive generation
                () -> Arbitraries.just(Doc.empty()),
@@ -1612,13 +1650,13 @@ public class DocTest {
                // Append
                () -> docsWithSeparators().tuple2().map(tuple -> tuple.get1().append(tuple.get2())),
                // Margin
-               () -> docsWithSeparators().tuple2().filter(tuple -> !tuple.get2().hasLineSeparators()).map(tuple -> tuple.get1().margin(tuple.get2())),
+               () -> Combinators.combine(docsWithSeparators(), marginDocs()).as((doc, margin) -> doc.margin(margin)),
                // Indent
                () -> docsWithSeparators().map(doc -> doc.indent(2)),
                // Alternatives
                () -> docsWithSeparators().map(Doc::group),
                // Styled
-               () -> docsWithSeparators().flatMap(doc -> styles().array(Styles.StylesOperator[].class).ofMaxSize(5).map(doc::styled)),
+               () -> Combinators.combine(docsWithSeparators(), docStyles()).as((doc, styles) -> doc.styled(styles)),
                // Line
                () -> Arbitraries.just(Doc.line()),
                // LineOrSpace
@@ -1626,7 +1664,7 @@ public class DocTest {
                // LineOrEmpty
                () -> Arbitraries.just(Doc.lineOrEmpty()),
                // LineOr
-               () -> Arbitraries.strings().ofMaxLength(10).map(Doc::lineOr),
+               () -> Arbitraries.strings().ofMaxLength(5).map(Doc::lineOr),
                () -> docsWithSeparators().map(Doc::lineOr),
                // Bracketing
                () -> docsWithSeparators().map(doc -> doc.bracket(2, Doc.lineOrEmpty(), Doc.text("["), Doc.text("]")))
@@ -1638,11 +1676,13 @@ public class DocTest {
         return Arbitraries.lazyOf(
                 // Text
                 // Repeated to reduce the frequency of recursive generation
-                () -> Arbitraries.strings().ofMaxLength(100).map(Doc::text),
-                () -> Arbitraries.strings().ofMaxLength(100).map(Doc::text),
-                () -> Arbitraries.strings().ofMaxLength(100).map(Doc::text),
-                () -> Arbitraries.strings().ofMaxLength(100).map(Doc::text),
-                () -> Arbitraries.strings().ofMaxLength(100).map(Doc::text),
+                () -> Arbitraries.strings().ofMaxLength(10).map(Doc::text),
+                () -> Arbitraries.strings().ofMaxLength(10).map(Doc::text),
+                () -> Arbitraries.strings().ofMaxLength(10).map(Doc::text),
+                () -> Arbitraries.strings().ofMaxLength(10).map(Doc::text),
+                () -> Arbitraries.strings().ofMaxLength(10).map(Doc::text),
+                // WrapText
+                () -> wrappableText().map(WrapText::new),
                 // Empty
                 // Repeated to reduce the frequency of recursive generation
                 () -> Arbitraries.just(Doc.empty()),
@@ -1650,14 +1690,35 @@ public class DocTest {
                 // Append
                 () -> docs().tuple2().map(tuple -> tuple.get1().append(tuple.get2())),
                 // Margin
-                () -> docs().tuple2().filter(tuple -> !tuple.get2().hasLineSeparators()).map(tuple -> tuple.get1().margin(tuple.get2())),
+                () -> Combinators.combine(docs(), marginDocs()).as((doc, margin) -> doc.margin(margin)),
                 // Indent
                 () -> docs().map(doc -> doc.indent(2)),
                 // Alternatives
                 () -> docs().map(Doc::group),
                 // Styled
-                () -> docs().flatMap(doc -> styles().array(Styles.StylesOperator[].class).ofMaxSize(5).map(doc::styled))
+                () -> Combinators.combine(docs(), docStyles()).as((doc, styles) -> doc.styled(styles))
         );
+    }
+
+    @Provide
+    Arbitrary<Doc> marginDocs() {
+        return Arbitraries.lazyOf(
+                // Short margin strings
+                () -> Arbitraries.strings()
+                        .ascii()
+                        .ofMinLength(1)
+                        .ofMaxLength(5)
+                        .map(Doc::text),
+                // Styled margin strings
+                () -> Combinators.combine(
+                        marginDocs().filter(doc -> doc instanceof Text),
+                        docStyles()
+                    ).as((doc, styles) -> doc.styled(styles))
+        );
+    }
+
+    ArrayArbitrary<Styles.StylesOperator, Styles.StylesOperator[]> docStyles() {
+       return styles().array(Styles.StylesOperator[].class).ofMaxSize(5);
     }
 
     String sgrCode(int ...codes) {
