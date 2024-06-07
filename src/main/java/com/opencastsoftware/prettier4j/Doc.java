@@ -1601,6 +1601,9 @@ public abstract class Doc {
         return alternatives(doc.flatten(), doc);
     }
 
+    /**
+     * A render queue entry which keeps track of the indentation and margin of a given {@link Doc}.
+     */
     static final class Entry {
         private final int indent;
         private final Doc margin;
@@ -1647,6 +1650,14 @@ public abstract class Doc {
         }
     }
 
+    /**
+     * Construct a render queue entry.
+     *
+     * @param indent the indentation of the {@code doc}.
+     * @param margin the margin document for the {@code doc}.
+     * @param doc the document to be rendered.
+     * @return a render queue entry.
+     */
     private static Entry entry(int indent, Doc margin, Doc doc) {
         return new Entry(indent, margin, doc);
     }
@@ -1669,7 +1680,7 @@ public abstract class Doc {
         for (Entry entry : entries) {
             Doc entryDoc = entry.doc();
 
-            // normalization reduces Doc to Text, LineOr, Escape and Reset
+            // layout reduces Doc to Text, LineOr, Escape and Reset
             if (entryDoc instanceof Text) {
                 Text textDoc = (Text) entryDoc;
                 remaining -= textDoc.text().length();
@@ -1721,13 +1732,9 @@ public abstract class Doc {
      * @return a queue of entries to be rendered.
      */
     private static Queue<Entry> layout(Doc doc, RenderOptions options, Doc margin, int indent, int position) {
-        // Not yet normalized entries
         Deque<Entry> inQueue = new ArrayDeque<>();
-
-        // Normalized entries
         Queue<Entry> outQueue = new ArrayDeque<>();
 
-        // Start with the outer Doc
         inQueue.add(entry(indent, margin, doc));
 
         while (!inQueue.isEmpty()) {
@@ -1738,6 +1745,24 @@ public abstract class Doc {
         return outQueue;
     }
 
+    /**
+     * Attempts to wrap a line of the {@code wrapDoc} text so that it fits within the rendering width defined in the {@code options}.
+     * <p>
+     * If the very first word found on any line of the {@code wrapDoc} is longer than the current rendering width, then it
+     * will be emitted anyway in order to make progress in laying out the document.
+     * <p>
+     * We do not attempt to lay out more than a single line on each invocation of this method.
+     * <p>
+     * This is because we do not know the length of the current margin document in advance: it is an arbitrary {@link Doc} whose only
+     * constraint is that it must not contain any line separators.
+     *
+     * @param options the options to use for rendering.
+     * @param inQueue the layout input queue.
+     * @param entry the current queue entry which contained the {@code wrapDoc}.
+     * @param wrapDoc the {@link WrapText} document to be rendered.
+     * @param position the current position in the line.
+     * @return the new position on the line after consuming the first line of the {@code wrapDoc}.
+     */
     private static int wrapText(RenderOptions options, Deque<Entry> inQueue, Entry entry, WrapText wrapDoc, int position) {
         int entryIndent = entry.indent();
         Doc entryMargin = entry.margin();
@@ -1808,6 +1833,17 @@ public abstract class Doc {
         return position;
     }
 
+    /**
+     * Select a layout for the {@code topEntry} render queue entry, eliminating all nodes except for
+     * {@link Text}, {@link Escape}, {@link Reset} and subtypes of {@link LineOr}.
+     *
+     * @param options the options to use for rendering.
+     * @param inQueue the layout input queue.
+     * @param outQueue the rendering output queue.
+     * @param topEntry the top entry in the rendering queue.
+     * @param position the current position in the line.
+     * @return the new position on the line after choosing a layout for the {@code topEntry}.
+     */
     private static int layoutEntry(RenderOptions options, Deque<Entry> inQueue, Queue<Entry> outQueue, Entry topEntry, int position) {
         int entryIndent = topEntry.indent();
         Doc entryMargin = topEntry.margin();
@@ -1845,7 +1881,7 @@ public abstract class Doc {
         } else if (entryDoc instanceof Alternatives) {
             // Eliminate Alternatives
             Alternatives altDoc = (Alternatives) entryDoc;
-            // These entries are already normalized
+            // These entries are already laid out
             Queue<Entry> chosenEntries = chooseLayout(
                     altDoc.left(), altDoc.right(),
                     options, entryMargin, entryIndent, position);
@@ -1881,11 +1917,20 @@ public abstract class Doc {
         return position;
     }
 
+    /**
+     * Flush the rendering queue {@code outQueue} to the {@link Appendable} {@code output}, taking care of
+     * transitioning between different ANSI display attributes according to each {@link Escape} and {@link Reset} token.
+     *
+     * @param outQueue the rendering output queue.
+     * @param attrsStack a stack of display attributes that are in effect.
+     * @param output the output to render into.
+     * @throws IOException if the {@link Appendable} {@code output} throws when {@link Appendable#append(CharSequence) append}ed.
+     */
     private static void flushToOutput(Deque<Entry> outQueue, AttrsStack attrsStack, Appendable output) throws IOException {
         while (!outQueue.isEmpty()) {
             Entry entry = outQueue.removeFirst();
             Doc entryDoc = entry.doc();
-            // normalization reduces Doc to Text, LineOr, Escape and Reset
+            // layout reduces Doc to Text, LineOr, Escape and Reset
             if (entryDoc instanceof Text) {
                 Text textDoc = (Text) entryDoc;
                 output.append(textDoc.text());
