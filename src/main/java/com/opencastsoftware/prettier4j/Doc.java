@@ -501,13 +501,23 @@ public abstract class Doc {
      */
     public static class WrapText extends Doc {
         private final String text;
+        private final int offset;
 
-        WrapText(String text) {
+        WrapText(String text, int offset) {
             this.text = text;
+            this.offset = offset;
         }
 
         public String text() {
             return text;
+        }
+
+        public int offset() {
+            return offset;
+        }
+
+        public Doc atOffset(int offset) {
+            return new WrapText(this.text, offset);
         }
 
         @Override
@@ -540,21 +550,21 @@ public abstract class Doc {
             if (this == o) return true;
             if (o == null || getClass() != o.getClass()) return false;
             WrapText wrapText = (WrapText) o;
-            return Objects.equals(text, wrapText.text);
+            return offset == wrapText.offset && Objects.equals(text, wrapText.text);
         }
 
         @Override
         public int hashCode() {
-            return Objects.hashCode(text);
+            return Objects.hash(text, offset);
         }
 
         @Override
         public String toString() {
-            return "WrapText{" +
+            return "WrapText[" +
                     "text='" + text + '\'' +
-                    '}';
+                    ", offset=" + offset +
+                    ']';
         }
-
     }
 
     /**
@@ -1383,7 +1393,7 @@ public abstract class Doc {
     public static Doc wrapText(String text) {
         // By empty text equivalency law
         if (text.isEmpty()) { return empty(); }
-        return new WrapText(text);
+        return new WrapText(text, 0);
     }
 
     /**
@@ -1591,6 +1601,9 @@ public abstract class Doc {
         return alternatives(doc.flatten(), doc);
     }
 
+    /**
+     * A render queue entry which keeps track of the indentation and margin of a given {@link Doc}.
+     */
     static final class Entry {
         private final int indent;
         private final Doc margin;
@@ -1637,7 +1650,15 @@ public abstract class Doc {
         }
     }
 
-    static Entry entry(int indent, Doc margin, Doc doc) {
+    /**
+     * Construct a render queue entry.
+     *
+     * @param indent the indentation of the {@code doc}.
+     * @param margin the margin document for the {@code doc}.
+     * @param doc the document to be rendered.
+     * @return a render queue entry.
+     */
+    private static Entry entry(int indent, Doc margin, Doc doc) {
         return new Entry(indent, margin, doc);
     }
 
@@ -1652,14 +1673,14 @@ public abstract class Doc {
      * @return true if we can fit all {@link Doc.Text entries} up to the
      * next line break into the remaining characters of the current line.
      */
-    static boolean fits(int remaining, Deque<Entry> entries) {
+    static boolean fits(int remaining, Queue<Entry> entries) {
         if (remaining < 0)
             return false;
 
         for (Entry entry : entries) {
             Doc entryDoc = entry.doc();
 
-            // normalization reduces Doc to Text, LineOr, Escape and Reset
+            // layout reduces Doc to Text, LineOr, Escape and Reset
             if (entryDoc instanceof Text) {
                 Text textDoc = (Text) entryDoc;
                 remaining -= textDoc.text().length();
@@ -1686,15 +1707,15 @@ public abstract class Doc {
      * @param position the position in the current line.
      * @return the entries of the chosen layout.
      */
-    static Deque<Entry> chooseLayout(Doc left, Doc right, RenderOptions options, Doc margin, int indent, int position) {
-        Deque<Entry> leftEntries = normalize(left, options, margin, indent, position);
+    private static Queue<Entry> chooseLayout(Doc left, Doc right, RenderOptions options, Doc margin, int indent, int position) {
+        Queue<Entry> leftEntries = layout(left, options, margin, indent, position);
 
         int remaining = options.lineWidth() - position;
 
         if (fits(remaining, leftEntries)) {
             return leftEntries;
         } else {
-            return normalize(right, options, margin, indent, position);
+            return layout(right, options, margin, indent, position);
         }
     }
 
@@ -1710,174 +1731,206 @@ public abstract class Doc {
      * @param position the current position in the line.
      * @return a queue of entries to be rendered.
      */
-    static Deque<Entry> normalize(Doc doc, RenderOptions options, Doc margin, int indent, int position) {
-        // Not yet normalized entries
+    private static Queue<Entry> layout(Doc doc, RenderOptions options, Doc margin, int indent, int position) {
         Deque<Entry> inQueue = new ArrayDeque<>();
+        Queue<Entry> outQueue = new ArrayDeque<>();
 
-        // Normalized entries
-        Deque<Entry> outQueue = new ArrayDeque<>();
-
-        // Start with the outer Doc
         inQueue.add(entry(indent, margin, doc));
 
         while (!inQueue.isEmpty()) {
             Entry topEntry = inQueue.removeFirst();
-
-            int entryIndent = topEntry.indent();
-            Doc entryMargin = topEntry.margin();
-            Doc entryDoc = topEntry.doc();
-
-            if (entryDoc instanceof Append) {
-                // Eliminate Append
-                Append appendDoc = (Append) entryDoc;
-                // Note reverse order
-                inQueue.addFirst(entry(entryIndent, entryMargin, appendDoc.right()));
-                inQueue.addFirst(entry(entryIndent, entryMargin, appendDoc.left()));
-            } else if (entryDoc instanceof Styled) {
-                // Eliminate Styled
-                Styled styledDoc = (Styled) entryDoc;
-                if (options.emitAnsiEscapes()) {
-                    // Note reverse order
-                    inQueue.addFirst(entry(entryIndent, entryMargin, Reset.getInstance()));
-                    inQueue.addFirst(entry(entryIndent, entryMargin, styledDoc.doc()));
-                    inQueue.addFirst(entry(entryIndent, entryMargin, new Escape(styledDoc.styles())));
-                } else {
-                    // Ignore styles and emit the underlying Doc
-                    inQueue.addFirst(entry(entryIndent, entryMargin, styledDoc.doc()));
-                }
-            } else if (entryDoc instanceof Indent) {
-                // Eliminate Indent
-                Indent indentDoc = (Indent) entryDoc;
-                int newIndent = entryIndent + indentDoc.indent();
-                inQueue.addFirst(entry(newIndent, entryMargin, indentDoc.doc()));
-            } else if (entryDoc instanceof Margin) {
-                // Eliminate Margin
-                Margin marginDoc = (Margin) entryDoc;
-                // Note reverse order
-                Doc newMargin = entryMargin.append(marginDoc.margin());
-                inQueue.addFirst(entry(entryIndent, newMargin, marginDoc.doc()));
-            } else if (entryDoc instanceof Alternatives) {
-                // Eliminate Alternatives
-                Alternatives altDoc = (Alternatives) entryDoc;
-                // These entries are already normalized
-                Deque<Entry> chosenEntries = chooseLayout(
-                        altDoc.left(), altDoc.right(),
-                        options, entryMargin, entryIndent, position);
-                chosenEntries.forEach(outQueue::addLast);
-            } else if (entryDoc instanceof WrapText) {
-                WrapText wrapDoc = (WrapText) entryDoc;
-                String wrapText = wrapDoc.text();
-                int textLength = wrapText.length();
-                if (textLength == 0) { continue; }
-
-                StringBuilder wrapped = new StringBuilder(options.lineWidth());
-
-                int textOffset = 0;
-                int wordStart = -1;
-                for (; textOffset < textLength; textOffset++) {
-                    char currentChar = wrapText.charAt(textOffset);
-
-                    boolean isInWord = wordStart >= 0;
-                    boolean isWhitespace = Character.isWhitespace(currentChar);
-                    boolean isStartOfWord = !isWhitespace && !isInWord;
-
-                    if (isStartOfWord) {
-                        wordStart = textOffset;
-                        isInWord = true;
-                    }
-
-                    boolean isLastChar = textOffset == textLength - 1;
-                    boolean isEndOfWord = (isWhitespace || isLastChar) && isInWord;
-                    boolean isFirstWord = wrapped.length() == 0;
-
-                    if (isEndOfWord) {
-                        int precedingSpaces = isFirstWord ? 0 : 1;
-                        int wordEnd = isLastChar ? textLength : textOffset;
-                        int wordLength = wordEnd - wordStart + precedingSpaces;
-                        int remaining = options.lineWidth() - position;
-                        if (remaining < wordLength) {
-                            if (isFirstWord) {
-                                // It's a really long word, so send it out to make progress
-                                wrapped.append(wrapText, wordStart, wordEnd);
-                                position += wordLength;
-                                wordStart = -1;
-                            }
-                            if (!isLastChar) break;
-                        } else {
-                            if (!isFirstWord) { wrapped.append(' '); }
-                            wrapped.append(wrapText, wordStart, wordEnd);
-                            position += wordLength;
-                            wordStart = -1;
-                        }
-                    }
-                }
-
-                // Skip trailing whitespace
-                while (textOffset < textLength && Character.isWhitespace(wrapText.charAt(textOffset))) {
-                    textOffset++;
-                }
-
-                int restOffset = wordStart > 0 ? wordStart : textOffset;
-                int remainingChars = textLength - restOffset;
-                if (remainingChars > 0) {
-                    // Send out remainder prefixed by line separator
-                    String remainingText = wrapText.substring(restOffset);
-                    inQueue.addFirst(entry(entryIndent, entryMargin, wrapText(remainingText)));
-                    inQueue.addFirst(entry(entryIndent, entryMargin, line()));
-                }
-
-                // Send out the wrapped line
-                inQueue.addFirst(entry(entryIndent, entryMargin, text(wrapped.toString())));
-
-            } else if (entryDoc instanceof Text) {
-                Text textDoc = (Text) entryDoc;
-                // Keep track of line length
-                position += textDoc.text().length();
-                outQueue.addLast(topEntry);
-            } else if (entryDoc instanceof LineOr) {
-                // Reset line length
-                position = entryIndent;
-                // Note reverse order
-                if (entryIndent > 0) {
-                    // Send out the indent spaces
-                    char[] indentChars = new char[entryIndent];
-                    Arrays.fill(indentChars, ' ');
-                    String indentSpaces = new String(indentChars);
-                    inQueue.addFirst(entry(entryIndent, entryMargin, text(indentSpaces)));
-                }
-                // Send out the current margin
-                inQueue.addFirst(entry(entryIndent, entryMargin, entryMargin));
-                outQueue.addLast(topEntry);
-            } else if (entryDoc instanceof Escape) {
-                outQueue.addLast(topEntry);
-            } else if (entryDoc instanceof Reset) {
-                outQueue.addLast(topEntry);
-            }
-            // Eliminate Empty
+            position = layoutEntry(options, inQueue, outQueue, topEntry, position);
         }
 
         return outQueue;
     }
 
     /**
-     * Renders the input {@link Doc} into an {@link Appendable}, attempting to lay out the document
-     * according to the rendering {@code options}.
+     * Attempts to wrap a line of the {@code wrapDoc} text so that it fits within the rendering width defined in the {@code options}.
+     * <p>
+     * If the very first word found on any line of the {@code wrapDoc} is longer than the current rendering width, then it
+     * will be emitted anyway in order to make progress in laying out the document.
+     * <p>
+     * We do not attempt to lay out more than a single line on each invocation of this method.
+     * <p>
+     * This is because we do not know the length of the current margin document in advance: it is an arbitrary {@link Doc} whose only
+     * constraint is that it must not contain any line separators.
      *
-     * @param doc     the document to be rendered.
      * @param options the options to use for rendering.
-     * @param output  the output to render into.
+     * @param inQueue the layout input queue.
+     * @param entry the current queue entry which contained the {@code wrapDoc}.
+     * @param wrapDoc the {@link WrapText} document to be rendered.
+     * @param position the current position in the line.
+     * @return the new position on the line after consuming the first line of the {@code wrapDoc}.
+     */
+    private static int wrapText(RenderOptions options, Deque<Entry> inQueue, Entry entry, WrapText wrapDoc, int position) {
+        int entryIndent = entry.indent();
+        Doc entryMargin = entry.margin();
+
+        String wrapText = wrapDoc.text();
+        int textLength = wrapText.length();
+        if (textLength == 0) { return position; }
+
+        StringBuilder wrapped = new StringBuilder(options.lineWidth());
+
+        int textOffset = wrapDoc.offset();
+        int wordStart = -1;
+        for (; textOffset < textLength; textOffset++) {
+            char currentChar = wrapText.charAt(textOffset);
+
+            boolean isInWord = wordStart >= 0;
+            boolean isWhitespace = Character.isWhitespace(currentChar);
+            boolean isStartOfWord = !isWhitespace && !isInWord;
+
+            if (isStartOfWord) {
+                wordStart = textOffset;
+                isInWord = true;
+            }
+
+            boolean isLastChar = textOffset == textLength - 1;
+            boolean isEndOfWord = (isWhitespace || isLastChar) && isInWord;
+            boolean isFirstWord = wrapped.length() == 0;
+
+            if (isEndOfWord) {
+                int precedingSpaces = isFirstWord ? 0 : 1;
+                int wordEnd = isLastChar ? textLength : textOffset;
+                int wordLength = wordEnd - wordStart + precedingSpaces;
+                int remaining = options.lineWidth() - position;
+                if (remaining < wordLength) {
+                    if (isFirstWord) {
+                        // It's a really long word, so send it out to make progress
+                        wrapped.append(wrapText, wordStart, wordEnd);
+                        position += wordLength;
+                        wordStart = -1;
+                    }
+                    if (!isLastChar) break;
+                } else {
+                    if (!isFirstWord) { wrapped.append(' '); }
+                    wrapped.append(wrapText, wordStart, wordEnd);
+                    position += wordLength;
+                    wordStart = -1;
+                }
+            }
+        }
+
+        // Skip trailing whitespace
+        while (textOffset < textLength && Character.isWhitespace(wrapText.charAt(textOffset))) {
+            textOffset++;
+        }
+
+        int restOffset = wordStart > 0 ? wordStart : textOffset;
+        int remainingChars = textLength - restOffset;
+        if (remainingChars > 0) {
+            // Send out remainder prefixed by line separator
+            Doc remainingDoc = wrapDoc.atOffset(restOffset);
+            inQueue.addFirst(entry(entryIndent, entryMargin, remainingDoc));
+            inQueue.addFirst(entry(entryIndent, entryMargin, line()));
+        }
+
+        // Send out the wrapped line
+        inQueue.addFirst(entry(entryIndent, entryMargin, text(wrapped.toString())));
+
+        return position;
+    }
+
+    /**
+     * Select a layout for the {@code topEntry} render queue entry, eliminating all nodes except for
+     * {@link Text}, {@link Escape}, {@link Reset} and subtypes of {@link LineOr}.
+     *
+     * @param options the options to use for rendering.
+     * @param inQueue the layout input queue.
+     * @param outQueue the rendering output queue.
+     * @param topEntry the top entry in the rendering queue.
+     * @param position the current position in the line.
+     * @return the new position on the line after choosing a layout for the {@code topEntry}.
+     */
+    private static int layoutEntry(RenderOptions options, Deque<Entry> inQueue, Queue<Entry> outQueue, Entry topEntry, int position) {
+        int entryIndent = topEntry.indent();
+        Doc entryMargin = topEntry.margin();
+        Doc entryDoc = topEntry.doc();
+
+        if (entryDoc instanceof Append) {
+            // Eliminate Append
+            Append appendDoc = (Append) entryDoc;
+            // Note reverse order
+            inQueue.addFirst(entry(entryIndent, entryMargin, appendDoc.right()));
+            inQueue.addFirst(entry(entryIndent, entryMargin, appendDoc.left()));
+        } else if (entryDoc instanceof Styled) {
+            // Eliminate Styled
+            Styled styledDoc = (Styled) entryDoc;
+            if (options.emitAnsiEscapes()) {
+                // Note reverse order
+                inQueue.addFirst(entry(entryIndent, entryMargin, Reset.getInstance()));
+                inQueue.addFirst(entry(entryIndent, entryMargin, styledDoc.doc()));
+                inQueue.addFirst(entry(entryIndent, entryMargin, new Escape(styledDoc.styles())));
+            } else {
+                // Ignore styles and emit the underlying Doc
+                inQueue.addFirst(entry(entryIndent, entryMargin, styledDoc.doc()));
+            }
+        } else if (entryDoc instanceof Indent) {
+            // Eliminate Indent
+            Indent indentDoc = (Indent) entryDoc;
+            int newIndent = entryIndent + indentDoc.indent();
+            inQueue.addFirst(entry(newIndent, entryMargin, indentDoc.doc()));
+        } else if (entryDoc instanceof Margin) {
+            // Eliminate Margin
+            Margin marginDoc = (Margin) entryDoc;
+            // Note reverse order
+            Doc newMargin = entryMargin.append(marginDoc.margin());
+            inQueue.addFirst(entry(entryIndent, newMargin, marginDoc.doc()));
+        } else if (entryDoc instanceof Alternatives) {
+            // Eliminate Alternatives
+            Alternatives altDoc = (Alternatives) entryDoc;
+            // These entries are already laid out
+            Queue<Entry> chosenEntries = chooseLayout(
+                    altDoc.left(), altDoc.right(),
+                    options, entryMargin, entryIndent, position);
+            outQueue.addAll(chosenEntries);
+        } else if (entryDoc instanceof WrapText) {
+            // Eliminate WrapText
+            WrapText wrapDoc = (WrapText) entryDoc;
+            position = wrapText(options, inQueue, topEntry, wrapDoc, position);
+        } else if (entryDoc instanceof Text) {
+            Text textDoc = (Text) entryDoc;
+            // Keep track of line length
+            position += textDoc.text().length();
+            outQueue.add(topEntry);
+        } else if (entryDoc instanceof LineOr) {
+            // Reset line length
+            position = entryIndent;
+            // Note reverse order
+            if (entryIndent > 0) {
+                // Send out the indent spaces
+                String indentSpaces = Indents.get(entryIndent);
+                inQueue.addFirst(entry(entryIndent, entryMargin, text(indentSpaces)));
+            }
+            // Send out the current margin
+            inQueue.addFirst(entry(entryIndent, entryMargin, entryMargin));
+            outQueue.add(topEntry);
+        } else if (entryDoc instanceof Escape) {
+            outQueue.add(topEntry);
+        } else if (entryDoc instanceof Reset) {
+            outQueue.add(topEntry);
+        }
+        // Eliminate Empty
+
+        return position;
+    }
+
+    /**
+     * Flush the rendering queue {@code outQueue} to the {@link Appendable} {@code output}, taking care of
+     * transitioning between different ANSI display attributes according to each {@link Escape} and {@link Reset} token.
+     *
+     * @param outQueue the rendering output queue.
+     * @param attrsStack a stack of display attributes that are in effect.
+     * @param output the output to render into.
      * @throws IOException if the {@link Appendable} {@code output} throws when {@link Appendable#append(CharSequence) append}ed.
      */
-    public static void render(Doc doc, RenderOptions options, Appendable output) throws IOException {
-        if (doc.hasParams()) { throw new IllegalStateException("This Doc contains unbound parameters"); }
-
-        Deque<Entry> renderQueue = normalize(doc, options, empty(), 0, 0);
-        AttrsStack attrsStack = new AttrsStack();
-
-        for (Entry entry : renderQueue) {
+    private static void flushToOutput(Deque<Entry> outQueue, AttrsStack attrsStack, Appendable output) throws IOException {
+        while (!outQueue.isEmpty()) {
+            Entry entry = outQueue.removeFirst();
             Doc entryDoc = entry.doc();
-
-            // normalization reduces Doc to Text, LineOr, Escape and Reset
+            // layout reduces Doc to Text, LineOr, Escape and Reset
             if (entryDoc instanceof Text) {
                 Text textDoc = (Text) entryDoc;
                 output.append(textDoc.text());
@@ -1895,6 +1948,32 @@ public abstract class Doc {
                 attrsStack.pushLast(newAttrs);
                 output.append(Attrs.transition(prevAttrs, newAttrs));
             }
+        }
+    }
+
+    /**
+     * Renders the input {@link Doc} into an {@link Appendable}, attempting to lay out the document
+     * according to the rendering {@code options}.
+     *
+     * @param doc     the document to be rendered.
+     * @param options the options to use for rendering.
+     * @param output  the output to render into.
+     * @throws IOException if the {@link Appendable} {@code output} throws when {@link Appendable#append(CharSequence) append}ed.
+     */
+    public static void render(Doc doc, RenderOptions options, Appendable output) throws IOException {
+        if (doc.hasParams()) { throw new IllegalStateException("This Doc contains unbound parameters"); }
+
+        int position = 0;
+        Deque<Entry> inQueue = new ArrayDeque<>();
+        Deque<Entry> outQueue = new ArrayDeque<>();
+        AttrsStack attrsStack = new AttrsStack();
+
+        inQueue.add(entry(0, empty(), doc));
+
+        while (!inQueue.isEmpty()) {
+            Entry topEntry = inQueue.removeFirst();
+            position = layoutEntry(options, inQueue, outQueue, topEntry, position);
+            flushToOutput(outQueue, attrsStack, output);
         }
     }
 
