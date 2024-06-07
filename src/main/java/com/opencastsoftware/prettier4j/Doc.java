@@ -1855,9 +1855,7 @@ public abstract class Doc {
             // Note reverse order
             if (entryIndent > 0) {
                 // Send out the indent spaces
-                char[] indentChars = new char[entryIndent];
-                Arrays.fill(indentChars, ' ');
-                String indentSpaces = new String(indentChars);
+                String indentSpaces = Indents.get(entryIndent);
                 inQueue.addFirst(entry(entryIndent, entryMargin, text(indentSpaces)));
             }
             // Send out the current margin
