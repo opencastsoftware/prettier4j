@@ -501,13 +501,23 @@ public abstract class Doc {
      */
     public static class WrapText extends Doc {
         private final String text;
+        private final int offset;
 
-        WrapText(String text) {
+        WrapText(String text, int offset) {
             this.text = text;
+            this.offset = offset;
         }
 
         public String text() {
             return text;
+        }
+
+        public int offset() {
+            return offset;
+        }
+
+        public Doc atOffset(int offset) {
+            return new WrapText(this.text, offset);
         }
 
         @Override
@@ -540,21 +550,21 @@ public abstract class Doc {
             if (this == o) return true;
             if (o == null || getClass() != o.getClass()) return false;
             WrapText wrapText = (WrapText) o;
-            return Objects.equals(text, wrapText.text);
+            return offset == wrapText.offset && Objects.equals(text, wrapText.text);
         }
 
         @Override
         public int hashCode() {
-            return Objects.hashCode(text);
+            return Objects.hash(text, offset);
         }
 
         @Override
         public String toString() {
-            return "WrapText{" +
+            return "WrapText[" +
                     "text='" + text + '\'' +
-                    '}';
+                    ", offset=" + offset +
+                    ']';
         }
-
     }
 
     /**
@@ -1383,7 +1393,7 @@ public abstract class Doc {
     public static Doc wrapText(String text) {
         // By empty text equivalency law
         if (text.isEmpty()) { return empty(); }
-        return new WrapText(text);
+        return new WrapText(text, 0);
     }
 
     /**
@@ -1738,7 +1748,7 @@ public abstract class Doc {
 
         StringBuilder wrapped = new StringBuilder(options.lineWidth());
 
-        int textOffset = 0;
+        int textOffset = wrapDoc.offset();
         int wordStart = -1;
         for (; textOffset < textLength; textOffset++) {
             char currentChar = wrapText.charAt(textOffset);
@@ -1787,8 +1797,8 @@ public abstract class Doc {
         int remainingChars = textLength - restOffset;
         if (remainingChars > 0) {
             // Send out remainder prefixed by line separator
-            String remainingText = wrapText.substring(restOffset);
-            inQueue.addFirst(entry(entryIndent, entryMargin, wrapText(remainingText)));
+            Doc remainingDoc = wrapDoc.atOffset(restOffset);
+            inQueue.addFirst(entry(entryIndent, entryMargin, remainingDoc));
             inQueue.addFirst(entry(entryIndent, entryMargin, line()));
         }
 

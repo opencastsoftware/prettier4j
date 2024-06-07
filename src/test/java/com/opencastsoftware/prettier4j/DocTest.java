@@ -1462,7 +1462,7 @@ public class DocTest {
             @ForAll @IntRange(min = 10, max = 200) int width,
             @ForAll("wrappableText") String textToWrap
     ) {
-        String textWrapWithPrettier = new WrapText(textToWrap).render(width);
+        String textWrapWithPrettier = wrapText(textToWrap).render(width);
         String textWrapWithApache = WordUtils.wrap(textToWrap, width, null, false, "\\s+");
         assertThat(textWrapWithPrettier, is(equalTo(textWrapWithApache.strip().replaceAll("[\t\r\f\u000b]", " "))));
     }
@@ -1600,7 +1600,7 @@ public class DocTest {
                 () -> Arbitraries.strings().ofMaxLength(10).map(Doc::text),
                 () -> Arbitraries.strings().ofMaxLength(10).map(Doc::text),
                 // WrapText
-                () -> wrappableText().map(WrapText::new),
+                () -> wrappableText().map(Doc::wrapText),
                 // Empty
                 // Repeated to reduce the frequency of recursive generation
                 () -> Arbitraries.just(Doc.empty()),
@@ -1642,7 +1642,7 @@ public class DocTest {
                () -> Arbitraries.strings().ofMaxLength(10).map(Doc::text),
                () -> Arbitraries.strings().ofMaxLength(10).map(Doc::text),
                // WrapText
-               () -> wrappableText().map(WrapText::new),
+               () -> wrappableText().map(Doc::wrapText),
                // Empty
                // Repeated to reduce the frequency of recursive generation
                () -> Arbitraries.just(Doc.empty()),
@@ -1682,7 +1682,7 @@ public class DocTest {
                 () -> Arbitraries.strings().ofMaxLength(10).map(Doc::text),
                 () -> Arbitraries.strings().ofMaxLength(10).map(Doc::text),
                 // WrapText
-                () -> wrappableText().map(WrapText::new),
+                () -> wrappableText().map(Doc::wrapText),
                 // Empty
                 // Repeated to reduce the frequency of recursive generation
                 () -> Arbitraries.just(Doc.empty()),
