@@ -1663,38 +1663,6 @@ public abstract class Doc {
     }
 
     /**
-     * Inspects the remaining space on the current line and the entries in the
-     * current layout to see whether they fit onto the current line.
-     * <p>
-     * It's only necessary to inspect entries up to the next line break.
-     *
-     * @param remaining the remaining space on the current line.
-     * @param entries   the entries we'd like to fit onto this line
-     * @return true if we can fit all {@link Doc.Text entries} up to the
-     * next line break into the remaining characters of the current line.
-     */
-    static boolean fits(int remaining, Queue<Entry> entries) {
-        if (remaining < 0)
-            return false;
-
-        for (Entry entry : entries) {
-            Doc entryDoc = entry.doc();
-
-            // layout reduces Doc to Text, LineOr, Escape and Reset
-            if (entryDoc instanceof Text) {
-                Text textDoc = (Text) entryDoc;
-                remaining -= textDoc.text().length();
-                if (remaining < 0)
-                    return false;
-            } else if (entryDoc instanceof LineOr) {
-                return true;
-            } // No need to handle Escape or Reset as they are effectively zero-length
-        }
-
-        return true;
-    }
-
-    /**
      * Choose between two layouts at the current rendering width, indentation level
      * and line position, choosing the {@code left} document if it fits and the
      * {@code right} document otherwise.
@@ -1708,15 +1676,24 @@ public abstract class Doc {
      * @return the entries of the chosen layout.
      */
     private static Queue<Entry> chooseLayout(Doc left, Doc right, RenderOptions options, Doc margin, int indent, int position) {
-        Queue<Entry> leftEntries = layout(left, options, margin, indent, position);
+        Deque<Entry> inQueue = new ArrayDeque<>();
+        Queue<Entry> outQueue = new ArrayDeque<>();
 
-        int remaining = options.lineWidth() - position;
+        inQueue.add(entry(indent, margin, left));
 
-        if (fits(remaining, leftEntries)) {
-            return leftEntries;
-        } else {
-            return layout(right, options, margin, indent, position);
+        while (!inQueue.isEmpty()) {
+            Entry topEntry = inQueue.removeFirst();
+            position = layoutEntry(options, inQueue, outQueue, topEntry, position);
+
+            int remaining = options.lineWidth() - position;
+
+            if (remaining < 0) {
+                // The new entry doesn't fit, so use the other layout
+                return layout(right, options, margin, indent, position);
+            }
         }
+
+        return outQueue;
     }
 
     /**
