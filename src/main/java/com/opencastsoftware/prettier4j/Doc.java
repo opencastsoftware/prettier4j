@@ -434,6 +434,9 @@ public abstract class Doc {
             if (other instanceof Text) {
                 Text otherText = (Text) other;
                 return text(this.text() + otherText.text());
+            } else if (other instanceof Empty) {
+                // By left unit law
+                return this;
             }
 
             return new Append(this, other);
