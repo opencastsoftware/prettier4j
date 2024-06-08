@@ -1681,14 +1681,16 @@ public abstract class Doc {
 
         inQueue.add(entry(indent, margin, left));
 
+        int leftPosition = position;
+
         while (!inQueue.isEmpty()) {
             Entry topEntry = inQueue.removeFirst();
-            position = layoutEntry(options, inQueue, outQueue, topEntry, position);
+            leftPosition = layoutEntry(options, inQueue, outQueue, topEntry, leftPosition);
 
-            int remaining = options.lineWidth() - position;
+            int remaining = options.lineWidth() - leftPosition;
 
             if (remaining < 0) {
-                // The new entry doesn't fit, so use the other layout
+                // The new entry doesn't fit, so use the right layout
                 return layout(right, options, margin, indent, position);
             }
         }
