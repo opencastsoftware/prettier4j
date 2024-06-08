@@ -6,6 +6,8 @@ package com.opencastsoftware.prettier4j.ansi;
 
 import org.apiguardian.api.API;
 
+import java.io.IOException;
+
 import static org.apiguardian.api.API.Status.INTERNAL;
 
 /**
@@ -58,9 +60,10 @@ public class Attrs {
         return attrs;
     }
 
-    public static String transition(long prev, long next) {
+    public static void transition(Appendable output, long prev, long next) throws IOException {
         if (next <= EMPTY) {
-            return isEmpty(prev) ? "" : AnsiConstants.RESET;
+            if (!isEmpty(prev)) { output.append(AnsiConstants.RESET); }
+            return;
         }
 
         int[] sgrParams = new int[MAX_SGR_PARAMS];
@@ -129,16 +132,16 @@ public class Attrs {
             sgrParams[sgrParamsCount++] = Color16.DEFAULT.bgCode();
         }
 
-        if (sgrParamsCount == 0) return "";
+        if (sgrParamsCount == 0) return;
 
-        StringBuilder result = new StringBuilder(AnsiConstants.CSI);
+        output.append(AnsiConstants.CSI);
 
         for (int i = 0; i < sgrParamsCount; i++) {
-            if (i > 0) result.append(';');
-            result.append(sgrParams[i]);
+            if (i > 0) output.append(';');
+            output.append(Integer.toString(sgrParams[i]));
         }
 
-        return result.append('m').toString();
+        output.append('m');
     }
 
     private static ColorType colorType(long attrs, long shiftValue) {

@@ -1939,14 +1939,14 @@ public abstract class Doc {
             } else if (entryDoc instanceof Reset) {
                 long resetAttrs = attrsStack.popLast();
                 long prevAttrs = attrsStack.peekLast();
-                output.append(Attrs.transition(resetAttrs, prevAttrs));
+                Attrs.transition(output, resetAttrs, prevAttrs);
             } else if (entryDoc instanceof Escape) {
                 Escape escapeDoc = (Escape) entryDoc;
                 long prevAttrs = attrsStack.peekLast();
                 if (prevAttrs == Attrs.NULL) { prevAttrs = Attrs.EMPTY; }
                 long newAttrs = Attrs.withStyles(prevAttrs, escapeDoc.styles());
                 attrsStack.pushLast(newAttrs);
-                output.append(Attrs.transition(prevAttrs, newAttrs));
+                Attrs.transition(output, prevAttrs, newAttrs);
             }
         }
     }
