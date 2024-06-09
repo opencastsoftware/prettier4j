@@ -11,13 +11,16 @@ import com.opencastsoftware.prettier4j.ansi.Styles;
 import net.jqwik.api.*;
 import net.jqwik.api.arbitraries.ArrayArbitrary;
 import net.jqwik.api.constraints.IntRange;
+import net.jqwik.web.api.Web;
 import nl.jqno.equalsverifier.EqualsVerifier;
 import org.apache.commons.text.WordUtils;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 import java.io.StringWriter;
 import java.io.Writer;
+import java.net.URI;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.function.UnaryOperator;
@@ -262,6 +265,60 @@ public class DocTest {
                 Doc.text(", "),
                 Arrays.asList(Doc.text("a"), Doc.text("b"), Doc.text("c"))).render(80);
         assertThat(actual, is(equalTo(expected)));
+    }
+
+    @Test
+    void testHyperlink() {
+        URI uri = URI.create("https://example.com");
+        String expected = openLink(uri) + "a" + AnsiConstants.CLOSE_LINK;
+        String actual = text("a").link(uri).render(80);
+        char[] expectedChars = expected.toCharArray();
+        char[] actualChars = actual.toCharArray();
+        assertThat(actualChars, is(equalTo(expectedChars)));
+    }
+
+    @Test
+    void testHyperlinkAnsiDisabled() {
+        URI uri = URI.create("https://example.com");
+        String expected = "a";
+        RenderOptions options = RenderOptions.builder().emitAnsiEscapes(false).build();
+        String actual = text("a").link(uri).render(options);
+        char[] expectedChars = expected.toCharArray();
+        char[] actualChars = actual.toCharArray();
+        assertThat(actualChars, is(equalTo(expectedChars)));
+    }
+
+    @Test
+    void testHyperlinkToInnerDoc() {
+        URI uri = URI.create("https://example.com");
+        String expected = "one; " + openLink(uri) + "two" + AnsiConstants.CLOSE_LINK + "; three";
+        String altText = "; ";
+        // Without the hyperlink and escapes this Doc should fit within 15 chars
+        String actual = group(text("one")
+                .appendLineOr(altText, text("two").link(uri))
+                .appendLineOr(altText, text("three")))
+                .render(15);
+        char[] expectedChars = expected.toCharArray();
+        char[] actualChars = actual.toCharArray();
+        assertThat(actualChars, is(equalTo(expectedChars)));
+    }
+
+    @Test
+    @Disabled("Nested hyperlinks are not supported")
+    void testNestedHyperlink() {
+        URI outerUri = URI.create("https://example.com");
+        URI innerUri = URI.create("https://example.net");
+        String expected = openLink(outerUri) + "one; " + openLink(innerUri) + "two" + openLink(outerUri) + "; three" + AnsiConstants.CLOSE_LINK;
+        String altText = "; ";
+        // Without the hyperlink and escapes this Doc should fit within 15 chars
+        String actual = group(text("one")
+                .appendLineOr(altText, text("two").link(innerUri))
+                .appendLineOr(altText, text("three")))
+                .link(outerUri)
+                .render(15);
+        char[] expectedChars = expected.toCharArray();
+        char[] actualChars = actual.toCharArray();
+        assertThat(actualChars, is(equalTo(expectedChars)));
     }
 
     @Test
@@ -1492,8 +1549,8 @@ public class DocTest {
         EqualsVerifier
                 .forClasses(
                         Text.class, Append.class, Param.class, WrapText.class,
-                        Alternatives.class, Indent.class, Margin.class,
-                        LineOr.class, Escape.class, Styled.class)
+                        Alternatives.class, Indent.class, Margin.class, Link.class,
+                        LineOr.class, Escape.class, Styled.class, OpenLink.class)
                 .usingGetClass()
                 .withPrefabValues(Doc.class, left, right)
                 .verify();
@@ -1506,6 +1563,7 @@ public class DocTest {
                         Text.class, Append.class, Margin.class,
                         WrapText.class, Alternatives.class, Indent.class,
                         LineOr.class, Empty.class, Escape.class,
+                        Link.class, OpenLink.class, CloseLink.class,
                         Reset.class, Styled.class, Param.class)
                 .withPrefabValue(Doc.class, docsWithParams().sample())
                 .verify();
@@ -1613,6 +1671,8 @@ public class DocTest {
                 () -> docsWithParams().map(doc -> doc.indent(2)),
                 // Alternatives
                 () -> docsWithParams().map(Doc::group),
+                // Link
+                () -> Combinators.combine(Web.webDomains(), docsWithParams()).as((domain, doc) -> doc.link(URI.create("https://" + domain))),
                 // Styled
                 () -> Combinators.combine(docsWithParams(), docStyles()).as((doc, styles) -> doc.styled(styles)),
                 // Line
@@ -1655,6 +1715,8 @@ public class DocTest {
                () -> docsWithSeparators().map(doc -> doc.indent(2)),
                // Alternatives
                () -> docsWithSeparators().map(Doc::group),
+               // Link
+               () -> Combinators.combine(Web.webDomains(), docsWithSeparators()).as((domain, doc) -> doc.link(URI.create("https://" + domain))),
                // Styled
                () -> Combinators.combine(docsWithSeparators(), docStyles()).as((doc, styles) -> doc.styled(styles)),
                // Line
@@ -1695,6 +1757,8 @@ public class DocTest {
                 () -> docs().map(doc -> doc.indent(2)),
                 // Alternatives
                 () -> docs().map(Doc::group),
+                // Link
+                () -> Combinators.combine(Web.webDomains(), docs()).as((domain, doc) -> doc.link(URI.create("https://" + domain))),
                 // Styled
                 () -> Combinators.combine(docs(), docStyles()).as((doc, styles) -> doc.styled(styles))
         );
@@ -1719,6 +1783,10 @@ public class DocTest {
 
     ArrayArbitrary<Styles.StylesOperator, Styles.StylesOperator[]> docStyles() {
        return styles().array(Styles.StylesOperator[].class).ofMaxSize(5);
+    }
+
+    String openLink(URI uri) {
+        return AnsiConstants.OPEN_LINK + uri.toASCIIString() + AnsiConstants.ST;
     }
 
     String sgrCode(int ...codes) {

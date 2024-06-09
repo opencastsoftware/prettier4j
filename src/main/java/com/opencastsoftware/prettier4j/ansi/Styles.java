@@ -113,7 +113,24 @@ public class Styles {
     /**
      * An operator that is used to apply display styles to a {@link com.opencastsoftware.prettier4j.Doc Doc}.
      */
-    public interface StylesOperator extends LongUnaryOperator {}
+    @FunctionalInterface
+    public interface StylesOperator extends LongUnaryOperator {
+        StylesOperator IDENTITY = attrs -> attrs;
+
+        @Override
+        default StylesOperator compose(LongUnaryOperator before) {
+            return attrs -> applyAsLong(before.applyAsLong(attrs));
+        }
+
+        @Override
+        default StylesOperator andThen(LongUnaryOperator after) {
+            return attrs -> after.applyAsLong(applyAsLong(attrs));
+        }
+
+        static StylesOperator identity() {
+            return IDENTITY;
+        }
+    }
 
     static abstract class ColorStylesOperator implements StylesOperator {
         protected final Color color;
