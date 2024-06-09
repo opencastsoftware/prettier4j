@@ -4,12 +4,14 @@
  */
 package com.opencastsoftware.prettier4j;
 
+import com.opencastsoftware.prettier4j.ansi.AnsiConstants;
 import com.opencastsoftware.prettier4j.ansi.Attrs;
 import com.opencastsoftware.prettier4j.ansi.AttrsStack;
 import com.opencastsoftware.prettier4j.ansi.Styles;
 
 import java.io.IOException;
 import java.io.UncheckedIOException;
+import java.net.URI;
 import java.util.*;
 import java.util.function.BinaryOperator;
 import java.util.stream.Stream;
@@ -345,6 +347,19 @@ public abstract class Doc {
      */
     public final Doc styled(Styles.StylesOperator... styles) {
         return styled(this, styles);
+    }
+
+    /**
+     * Converts the current {@link Doc} into a hyperlink to the {@code uri} provided.
+     *
+     * @param uri the {@link URI} to link to.
+     * @return a {@link Doc} which acts as a hyperlink to the {@code uri}.
+     * @implNote This implementation does not currently handle nested hyperlinks, so
+     * all hyperlinks will be closed after the end of the first nested hyperlink.
+     * @see <a href="https://web.archive.org/web/20240525100920/https://gist.github.com/egmontkob/eb114294efbcd5adb1944c9f3cb5feda">Hyperlinks (a.k.a. HTML-like anchors) in terminal emulators</a>
+     */
+    public final Doc link(URI uri) {
+        return link(this, uri);
     }
 
     /**
@@ -1195,6 +1210,75 @@ public abstract class Doc {
     }
 
     /**
+     * Represents a {@link Doc} that acts as a hyperlink to a given {@link URI}.
+     *
+     * @see <a href="https://web.archive.org/web/20240525100920/https://gist.github.com/egmontkob/eb114294efbcd5adb1944c9f3cb5feda">Hyperlinks (a.k.a. HTML-like anchors) in terminal emulators</a>
+     */
+    public static class Link extends Doc {
+        private final URI uri;
+        private final Doc doc;
+
+        public Link(URI uri, Doc doc) {
+            this.uri = uri;
+            this.doc = doc;
+        }
+
+        public URI uri() {
+            return this.uri;
+        }
+
+        public Doc doc() {
+           return this.doc;
+        }
+
+        @Override
+        Doc flatten() {
+            return new Link(uri, doc.flatten());
+        }
+
+        @Override
+        boolean hasParams() {
+            return doc.hasParams();
+        }
+
+        @Override
+        boolean hasLineSeparators() {
+            return doc.hasLineSeparators();
+        }
+
+        @Override
+        public Doc bind(String name, Doc value) {
+            return new Link(uri, doc.bind(name, value));
+        }
+
+        @Override
+        public Doc bind(Map<String, Doc> bindings) {
+            return new Link(uri, doc.bind(bindings));
+        }
+
+        @Override
+        public boolean equals(Object o) {
+            if (this == o) return true;
+            if (o == null || getClass() != o.getClass()) return false;
+            Link link = (Link) o;
+            return Objects.equals(uri, link.uri) && Objects.equals(doc, link.doc);
+        }
+
+        @Override
+        public int hashCode() {
+            return Objects.hash(uri, doc);
+        }
+
+        @Override
+        public String toString() {
+            return "Link[" +
+                    "uri=" + uri +
+                    ", doc=" + doc +
+                    ']';
+        }
+    }
+
+    /**
      * Represents an ANSI escape code sequence.
      */
     public static class Escape extends Doc {
@@ -1295,6 +1379,114 @@ public abstract class Doc {
         @Override
         public String toString() {
             return "Reset []";
+        }
+    }
+
+    /**
+     * Represents the ANSI escape code sequence for opening a hyperlink.
+     *
+     * @see <a href="https://web.archive.org/web/20240525100920/https://gist.github.com/egmontkob/eb114294efbcd5adb1944c9f3cb5feda">Hyperlinks (a.k.a. HTML-like anchors) in terminal emulators</a>
+     */
+    public static class OpenLink extends Doc {
+        private final URI uri;
+
+        public OpenLink(URI uri) {
+            this.uri = uri;
+        }
+
+        public URI uri() {
+            return this.uri;
+        }
+
+        @Override
+        Doc flatten() {
+            return this;
+        }
+
+        @Override
+        boolean hasParams() {
+            return false;
+        }
+
+        @Override
+        boolean hasLineSeparators() {
+            return false;
+        }
+
+        @Override
+        public Doc bind(String name, Doc value) {
+            return this;
+        }
+
+        @Override
+        public Doc bind(Map<String, Doc> bindings) {
+            return this;
+        }
+
+        @Override
+        public boolean equals(Object o) {
+            if (this == o) return true;
+            if (o == null || getClass() != o.getClass()) return false;
+            OpenLink link = (OpenLink) o;
+            return Objects.equals(uri, link.uri);
+        }
+
+        @Override
+        public int hashCode() {
+            return Objects.hashCode(uri);
+        }
+
+        @Override
+        public String toString() {
+            return "OpenLink[" +
+                    "uri=" + uri +
+                    ']';
+        }
+    }
+
+    /**
+     * Represents the ANSI escape code sequence for closing a hyperlink.
+     *
+     * @see <a href="https://web.archive.org/web/20240525100920/https://gist.github.com/egmontkob/eb114294efbcd5adb1944c9f3cb5feda">Hyperlinks (a.k.a. HTML-like anchors) in terminal emulators</a>
+     */
+    public static class CloseLink extends Doc {
+        private static final CloseLink INSTANCE = new CloseLink();
+
+        static CloseLink getInstance() {
+            return INSTANCE;
+        }
+
+        CloseLink() {
+        }
+
+        @Override
+        Doc flatten() {
+            return this;
+        }
+
+        @Override
+        boolean hasParams() {
+            return false;
+        }
+
+        @Override
+        boolean hasLineSeparators() {
+            return false;
+        }
+
+        @Override
+        public Doc bind(String name, Doc value) {
+            return this;
+        }
+
+        @Override
+        public Doc bind(Map<String, Doc> bindings) {
+            return this;
+        }
+
+        @Override
+        public String toString() {
+            return "CloseLink []";
         }
     }
 
@@ -1532,6 +1724,20 @@ public abstract class Doc {
     }
 
     /**
+     * Converts the input {@link Doc} into a hyperlink to the {@code uri} provided.
+     *
+     * @param doc the input document.
+     * @param uri the {@link URI} to link to.
+     * @return a {@link Doc} that acts as a hyperlink to the {@code uri}.
+     * @implNote This implementation does not currently handle nested hyperlinks, so
+     * all hyperlinks will be closed after the end of the first nested hyperlink.
+     * @see <a href="https://web.archive.org/web/20240525100920/https://gist.github.com/egmontkob/eb114294efbcd5adb1944c9f3cb5feda">Hyperlinks (a.k.a. HTML-like anchors) in terminal emulators</a>
+     */
+    public static Doc link(Doc doc, URI uri) {
+        return new Link(uri, doc);
+    }
+
+    /**
      * Creates a {@link Doc} which acts as a placeholder for an argument {@link Doc} that will be provided
      * by {@link Doc#bind(String, Doc) binding} parameters prior to {@link Doc#render(int) render}ing.
      *
@@ -1703,8 +1909,8 @@ public abstract class Doc {
 
     /**
      * Traverses the input {@code doc} recursively, eliminating all nodes except for
-     * {@link Text}, {@link Escape}, {@link Reset} and subtypes of {@link LineOr},
-     * and produces a queue of entries to be rendered.
+     * {@link Text}, {@link Escape}, {@link Reset}, {@link OpenLink}, {@link CloseLink}
+     * and subtypes of {@link LineOr}, and produces a queue of entries to be rendered.
      *
      * @param doc      the document to be rendered.
      * @param options  the options to use for rendering.
@@ -1817,7 +2023,8 @@ public abstract class Doc {
 
     /**
      * Select a layout for the {@code topEntry} render queue entry, eliminating all nodes except for
-     * {@link Text}, {@link Escape}, {@link Reset} and subtypes of {@link LineOr}.
+     * {@link Text}, {@link Escape}, {@link Reset}, {@link OpenLink}, {@link CloseLink}
+     * and subtypes of {@link LineOr}, and produces a queue of entries to be rendered.
      *
      * @param options the options to use for rendering.
      * @param inQueue the layout input queue.
@@ -1849,6 +2056,18 @@ public abstract class Doc {
                 // Ignore styles and emit the underlying Doc
                 inQueue.addFirst(entry(entryIndent, entryMargin, styledDoc.doc()));
             }
+        } else if (entryDoc instanceof Link) {
+            // Eliminate Link
+            Link linkDoc = (Link) entryDoc;
+            if (options.emitAnsiEscapes()) {
+                // Note reverse order
+                inQueue.addFirst(entry(entryIndent, entryMargin, CloseLink.getInstance()));
+                inQueue.addFirst(entry(entryIndent, entryMargin, linkDoc.doc()));
+                inQueue.addFirst(entry(entryIndent, entryMargin, new OpenLink(linkDoc.uri())));
+            } else {
+                // Ignore link and emit the underlying Doc
+                inQueue.addFirst(entry(entryIndent, entryMargin, linkDoc.doc()));
+            }
         } else if (entryDoc instanceof Indent) {
             // Eliminate Indent
             Indent indentDoc = (Indent) entryDoc;
@@ -1864,10 +2083,9 @@ public abstract class Doc {
             // Eliminate Alternatives
             Alternatives altDoc = (Alternatives) entryDoc;
             // These entries are already laid out
-            Queue<Entry> chosenEntries = chooseLayout(
-                    altDoc.left(), altDoc.right(),
-                    options, entryMargin, entryIndent, position);
-            outQueue.addAll(chosenEntries);
+            outQueue.addAll(chooseLayout(
+                altDoc.left(), altDoc.right(),
+                options, entryMargin, entryIndent, position));
         } else if (entryDoc instanceof WrapText) {
             // Eliminate WrapText
             WrapText wrapDoc = (WrapText) entryDoc;
@@ -1889,6 +2107,10 @@ public abstract class Doc {
             // Send out the current margin
             inQueue.addFirst(entry(entryIndent, entryMargin, entryMargin));
             outQueue.add(topEntry);
+        } else if (entryDoc instanceof OpenLink) {
+            outQueue.add(topEntry);
+        } else if (entryDoc instanceof CloseLink) {
+            outQueue.add(topEntry);
         } else if (entryDoc instanceof Escape) {
             outQueue.add(topEntry);
         } else if (entryDoc instanceof Reset) {
@@ -1901,23 +2123,31 @@ public abstract class Doc {
 
     /**
      * Flush the rendering queue {@code outQueue} to the {@link Appendable} {@code output}, taking care of
-     * transitioning between different ANSI display attributes according to each {@link Escape} and {@link Reset} token.
+     * transitioning between different ANSI display attributes according to each {@link Escape} and {@link Reset} token
+     * and opening and closing hyperlinks according to each {@link OpenLink} and {@link CloseLink} token.
      *
      * @param outQueue the rendering output queue.
      * @param attrsStack a stack of display attributes that are in effect.
      * @param output the output to render into.
      * @throws IOException if the {@link Appendable} {@code output} throws when {@link Appendable#append(CharSequence) append}ed.
      */
-    private static void flushToOutput(Deque<Entry> outQueue, AttrsStack attrsStack, Appendable output) throws IOException {
+    private static void flushToOutput(Queue<Entry> outQueue, AttrsStack attrsStack, Appendable output) throws IOException {
         while (!outQueue.isEmpty()) {
-            Entry entry = outQueue.removeFirst();
+            Entry entry = outQueue.remove();
             Doc entryDoc = entry.doc();
-            // layout reduces Doc to Text, LineOr, Escape and Reset
+            // layout reduces Doc to Text, LineOr, OpenLink, CloseLink, Escape and Reset
             if (entryDoc instanceof Text) {
                 Text textDoc = (Text) entryDoc;
                 output.append(textDoc.text());
             } else if (entryDoc instanceof LineOr) {
                 output.append(System.lineSeparator());
+            } else if (entryDoc instanceof OpenLink) {
+                OpenLink openLinkDoc = (OpenLink) entryDoc;
+                output.append(AnsiConstants.OPEN_LINK);
+                output.append(openLinkDoc.uri().toASCIIString());
+                output.append(AnsiConstants.ST);
+            } else if (entryDoc instanceof CloseLink) {
+                output.append(AnsiConstants.CLOSE_LINK);
             } else if (entryDoc instanceof Reset) {
                 long resetAttrs = attrsStack.popLast();
                 long prevAttrs = attrsStack.peekLast();
@@ -1947,7 +2177,7 @@ public abstract class Doc {
 
         int position = 0;
         Deque<Entry> inQueue = new ArrayDeque<>();
-        Deque<Entry> outQueue = new ArrayDeque<>();
+        Queue<Entry> outQueue = new ArrayDeque<>();
         AttrsStack attrsStack = new AttrsStack();
 
         inQueue.add(entry(0, empty(), doc));
