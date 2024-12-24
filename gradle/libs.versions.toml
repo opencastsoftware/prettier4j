@@ -1,7 +1,7 @@
 [versions]
 apacheCommonsText = "1.13.0"
 apiGuardian = "1.1.2"
-equalsVerifier = "3.17.5"
+equalsVerifier = "3.18"
 gradleJavaConventions = "0.1.4"
 hamcrest = "3.0"
 jacoco = "0.8.8"
