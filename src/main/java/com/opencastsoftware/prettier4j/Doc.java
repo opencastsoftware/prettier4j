@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText:  © 2022-2024 Opencast Software Europe Ltd <https://opencastsoftware.com>
+ * SPDX-FileCopyrightText:  © 2022-2025 Opencast Software Europe Ltd <https://opencastsoftware.com>
  * SPDX-License-Identifier: Apache-2.0
  */
 package com.opencastsoftware.prettier4j;
@@ -234,6 +234,15 @@ public abstract class Doc {
      */
     public Doc indent(int indent) {
         return indent(indent, this);
+    }
+
+    /**
+     * Align any line breaks within this {@link Doc} to the line position at the start of the {@link Doc}.
+     *
+     * @return the aligned document.
+     */
+    public Doc align() {
+        return align(this);
     }
 
     /**
@@ -846,6 +855,67 @@ public abstract class Doc {
         @Override
         public String toString() {
             return "Indent [indent=" + indent + ", doc=" + doc + "]";
+        }
+    }
+
+    /**
+     * Represents an aligned {@link Doc}.
+     *
+     * Sets the indentation for line breaks within its inner {@link Doc} at the current line position.
+     */
+    public static class Align extends Doc {
+        private final Doc doc;
+
+        Align(Doc doc) {
+            this.doc = doc;
+        }
+
+        public Doc doc() {
+            return doc;
+        }
+
+        @Override
+        Doc flatten() {
+            return new Align(doc.flatten());
+        }
+
+        @Override
+        boolean hasParams() {
+            return doc.hasParams();
+        }
+
+        @Override
+        boolean hasLineSeparators() {
+            return doc.hasLineSeparators();
+        }
+
+        @Override
+        public Doc bind(String name, Doc value) {
+            return new Align(doc.bind(name, value));
+        }
+
+        @Override
+        public Doc bind(Map<String, Doc> bindings) {
+            return new Align(doc.bind(bindings));
+        }
+
+        @Override
+        public boolean equals(Object o) {
+            if (o == null || getClass() != o.getClass()) return false;
+            Align align = (Align) o;
+            return Objects.equals(doc, align.doc);
+        }
+
+        @Override
+        public int hashCode() {
+            return Objects.hashCode(doc);
+        }
+
+        @Override
+        public String toString() {
+            return "Align[" +
+                    "doc=" + doc +
+                    ']';
         }
     }
 
@@ -1616,6 +1686,16 @@ public abstract class Doc {
     }
 
     /**
+     * Align any line breaks within this {@link Doc} to the line position at the start of the {@link Doc}.
+     *
+     * @param doc the input document
+     * @return the aligned document.
+     */
+    public static Doc align(Doc doc) {
+        return new Align(doc);
+    }
+
+    /**
      * Apply the margin document {@code margin} to the current {@link Doc}, emitting the
      * margin at the start of every new line from the start of this document until the
      * end of the document.
@@ -2073,6 +2153,10 @@ public abstract class Doc {
             Indent indentDoc = (Indent) entryDoc;
             int newIndent = entryIndent + indentDoc.indent();
             inQueue.addFirst(entry(newIndent, entryMargin, indentDoc.doc()));
+        } else if (entryDoc instanceof Align) {
+            // Eliminate Align
+            Align alignDoc = (Align) entryDoc;
+            inQueue.addFirst(entry(position, entryMargin, alignDoc.doc()));
         } else if (entryDoc instanceof Margin) {
             // Eliminate Margin
             Margin marginDoc = (Margin) entryDoc;
@@ -2097,7 +2181,7 @@ public abstract class Doc {
             outQueue.add(topEntry);
         } else if (entryDoc instanceof LineOr) {
             // Reset line length
-            position = entryIndent;
+            position = 0;
             // Note reverse order
             if (entryIndent > 0) {
                 // Send out the indent spaces
