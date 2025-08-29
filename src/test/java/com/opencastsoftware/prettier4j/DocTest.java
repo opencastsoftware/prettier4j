@@ -1641,7 +1641,7 @@ public class DocTest {
         EqualsVerifier
                 .forClasses(
                         Text.class, Append.class, Param.class, WrapText.class,
-                        Alternatives.class, Indent.class, Margin.class, Link.class,
+                        Alternatives.class, Indent.class, Align.class, Margin.class, Link.class,
                         LineOr.class, Escape.class, Styled.class, OpenLink.class)
                 .usingGetClass()
                 .withPrefabValues(Doc.class, left, right)
