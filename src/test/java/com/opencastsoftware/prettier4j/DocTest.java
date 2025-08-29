@@ -1715,7 +1715,7 @@ public class DocTest {
                 .forClasses(
                         Text.class, Append.class, Margin.class,
                         WrapText.class, Alternatives.class, Indent.class,
-                        LineOr.class, Empty.class, Escape.class,
+                        LineOr.class, Empty.class, Escape.class, Align.class,
                         Link.class, OpenLink.class, CloseLink.class,
                         Reset.class, Styled.class, Param.class)
                 .withPrefabValue(Doc.class, docsWithParams().sample())
