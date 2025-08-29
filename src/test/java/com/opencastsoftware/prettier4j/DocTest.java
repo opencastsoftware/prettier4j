@@ -21,10 +21,10 @@ import java.io.IOException;
 import java.io.StringWriter;
 import java.io.Writer;
 import java.net.URI;
-import java.util.Arrays;
-import java.util.Collections;
+import java.util.*;
 import java.util.function.UnaryOperator;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import static com.opencastsoftware.prettier4j.Doc.*;
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -114,11 +114,29 @@ public class DocTest {
     }
 
     @Test
+    void testAppendLineWithAlign() {
+        String expected = "one two\n    three";
+        String actual = text("one")
+                .appendSpace(group(align(text("two").appendLine(text("three")))))
+                .render(30);
+        assertThat(actual, is(equalTo(expected)));
+    }
+
+    @Test
     void testAppendLineOrSpace() {
         String expected = "one two three";
         String actual = group(text("one")
                 .appendLineOrSpace(text("two"))
                 .appendLineOrSpace(text("three")))
+                .render(30);
+        assertThat(actual, is(equalTo(expected)));
+    }
+
+    @Test
+    void testAppendLineOrSpaceWithAlign() {
+        String expected = "one two three";
+        String actual = text("one")
+                .appendSpace(group(align(text("two").appendLineOrSpace(text("three")))))
                 .render(30);
         assertThat(actual, is(equalTo(expected)));
     }
@@ -130,6 +148,15 @@ public class DocTest {
                 .appendLineOrSpace(text("two"))
                 .appendLineOrSpace(text("three")))
                 .render(5);
+        assertThat(actual, is(equalTo(expected)));
+    }
+
+    @Test
+    void testAppendLineOrSpaceWithAlignFlattening() {
+        String expected = "one two\n    three";
+        String actual = text("one")
+                .appendSpace(group(align(text("two").appendLineOrSpace(text("three")))))
+                .render(10);
         assertThat(actual, is(equalTo(expected)));
     }
 
@@ -215,6 +242,38 @@ public class DocTest {
                 .render(10);
 
         assertThat(actual, is(equalTo(expected)));
+    }
+
+    @Test
+    void testNestedBracketFlattening() {
+        String expectedWidth80 = "let x = functionCall(with, args, nestedFunctionCall(with, more, args))";
+        String expectedWidth40 = "let x = functionCall(\n  with,\n  args,\n  nestedFunctionCall(with, more, args)\n)";
+        String expectedWidth20 = "let x = functionCall(\n  with,\n  args,\n  nestedFunctionCall(\n    with,\n    more,\n    args\n  )\n)";
+
+        Doc inputDoc = text("let")
+            .appendSpace(text("x"))
+            .appendSpace(text("="))
+            .appendSpace(text("functionCall")
+                .append(
+                    intersperse(
+                        text(",").append(lineOrSpace()),
+                        Stream.concat(
+                            Stream.of("with", "args").map(Doc::text),
+                            Stream.of(text("nestedFunctionCall")
+                                .append(
+                                    intersperse(
+                                        text(",").append(lineOrSpace()),
+                                        Stream.of("with", "more", "args").map(Doc::text)
+                                    ).bracket(2, lineOrEmpty(), text("("), text(")"))
+                                ))
+                        )
+                    ).bracket(2, lineOrEmpty(), text("("), text(")"))
+                )
+            );
+
+        assertThat(inputDoc.render(80), is(equalTo(expectedWidth80)));
+        assertThat(inputDoc.render(40), is(equalTo(expectedWidth40)));
+        assertThat(inputDoc.render(20), is(equalTo(expectedWidth20)));
     }
 
     @Test
