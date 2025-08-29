@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText:  © 2022-2024 Opencast Software Europe Ltd <https://opencastsoftware.com>
+ * SPDX-FileCopyrightText:  © 2022-2025 Opencast Software Europe Ltd <https://opencastsoftware.com>
  * SPDX-License-Identifier: Apache-2.0
  */
 package com.opencastsoftware.prettier4j;
@@ -274,6 +274,39 @@ public class DocTest {
         assertThat(inputDoc.render(80), is(equalTo(expectedWidth80)));
         assertThat(inputDoc.render(40), is(equalTo(expectedWidth40)));
         assertThat(inputDoc.render(20), is(equalTo(expectedWidth20)));
+    }
+
+    @Test
+    void testAlignWithMultipleLines() {
+        String expected =
+                "∧ ∨ A ∨ B\n" +
+                "  ∨ C\n" +
+                "∧ ∨ D\n" +
+                "  ∨ E ∧ F\n" +
+                "  ∨ G";
+
+        // (A ∨ B) ∨ C
+        List<Doc> left = List.of(
+                text("A").appendSpace(text("∨")).appendSpace(text("B")),
+                text("C")
+        );
+
+        // D ∨ (E ∧ F) ∨ G
+        List<Doc> right = List.of(
+                text("D"),
+                text("E").appendSpace(text("∧")).appendSpace(text("F")),
+                text("G")
+        );
+
+        Doc alignedLeft = align(text("∨").appendSpace(intersperse(line().append(text("∨ ")), left)));
+        Doc leftJunctions = text("∧").appendSpace(alignedLeft);
+
+        Doc alignedRight = align(text("∨").appendSpace(intersperse(line().append(text("∨ ")), right)));
+        Doc rightJunctions = text("∧").appendSpace(alignedRight);
+
+        String result = leftJunctions.appendLine(rightJunctions).render(80);
+
+        assertThat(result, is(equalTo(expected)));
     }
 
     @Test

@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText:  © 2022-2024 Opencast Software Europe Ltd <https://opencastsoftware.com>
+ * SPDX-FileCopyrightText:  © 2022-2025 Opencast Software Europe Ltd <https://opencastsoftware.com>
  * SPDX-License-Identifier: Apache-2.0
  */
 package com.opencastsoftware.prettier4j;
@@ -446,10 +446,10 @@ public abstract class Doc {
         @Override
         public Doc append(Doc other) {
             // By string concat equivalency law
-            /*if (other instanceof Text) {
+            if (other instanceof Text) {
                 Text otherText = (Text) other;
                 return text(this.text() + otherText.text());
-            } else*/ if (other instanceof Empty) {
+            } else if (other instanceof Empty) {
                 // By left unit law
                 return this;
             }
