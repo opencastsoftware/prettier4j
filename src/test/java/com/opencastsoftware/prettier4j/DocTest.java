@@ -245,6 +245,28 @@ public class DocTest {
     }
 
     @Test
+    void testBracketFlatteningWithAlign() {
+        // Note: the arguments are aligned with the "functionCall" element because bracket doesn't support alignment.
+        // TODO: Consider adding a `hangingBracket` combinator that aligns the bracket docs with the starting line position
+        //       and the arguments with the opening bracket doc.
+        String expected = "functionCall(\n"+
+                Indents.get(12)+"a,\n"+
+                Indents.get(12)+"b,\n"+
+                Indents.get(12)+"c\n"+
+                Indents.get(12)+")";
+        String actual = text("functionCall")
+                .append(
+                        Doc.intersperse(
+                                        Doc.text(",").append(Doc.lineOrSpace()),
+                                        Stream.of("a", "b", "c").map(Doc::text))
+                                .bracket(0, Doc.lineOrEmpty(), Doc.text("("), Doc.text(")"))
+                                .align())
+                .render(10);
+
+        assertThat(actual, is(equalTo(expected)));
+    }
+
+    @Test
     void testNestedBracketFlattening() {
         String expectedWidth80 = "let x = functionCall(with, args, nestedFunctionCall(with, more, args))";
         String expectedWidth40 = "let x = functionCall(\n  with,\n  args,\n  nestedFunctionCall(with, more, args)\n)";
@@ -274,6 +296,45 @@ public class DocTest {
         assertThat(inputDoc.render(80), is(equalTo(expectedWidth80)));
         assertThat(inputDoc.render(40), is(equalTo(expectedWidth40)));
         assertThat(inputDoc.render(20), is(equalTo(expectedWidth20)));
+    }
+
+    @Test
+    void testNestedBracketFlatteningWithAlign() {
+        String expectedWidth80 = "let x = functionCall(with, args, nestedFunctionCall(with, more, args))";
+        String expectedWidth40 =
+                "let x = functionCall(\n"+
+                        Indents.get(20)+"with,\n"+
+                        Indents.get(20)+"args,\n"+
+                        Indents.get(20)+"nestedFunctionCall(\n"+
+                            Indents.get(38)+"with,\n"+
+                            Indents.get(38)+"more,\n"+
+                            Indents.get(38)+ "args\n"+
+                            Indents.get(38)+")\n"+
+                        Indents.get(20)+")";
+
+        Doc inputDoc = text("let")
+                .appendSpace(text("x"))
+                .appendSpace(text("="))
+                .appendSpace(text("functionCall")
+                        .append(align(
+                                intersperse(
+                                        text(",").append(lineOrSpace()),
+                                        Stream.concat(
+                                                Stream.of("with", "args").map(Doc::text),
+                                                Stream.of(text("nestedFunctionCall")
+                                                        .append(align(
+                                                                intersperse(
+                                                                        text(",").append(lineOrSpace()),
+                                                                        Stream.of("with", "more", "args").map(Doc::text)
+                                                                ).bracket(0, lineOrEmpty(), text("("), text(")"))
+                                                        )))
+                                        )
+                                ).bracket(0, lineOrEmpty(), text("("), text(")"))
+                        ))
+                );
+
+        assertThat(inputDoc.render(80), is(equalTo(expectedWidth80)));
+        assertThat(inputDoc.render(40), is(equalTo(expectedWidth40)));
     }
 
     @Test

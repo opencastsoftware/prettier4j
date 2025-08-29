@@ -237,6 +237,15 @@ public abstract class Doc {
     }
 
     /**
+     * Align any line breaks within this {@link Doc} to the line position at the start of the {@link Doc}.
+     *
+     * @return the aligned document.
+     */
+    public Doc align() {
+        return align(this);
+    }
+
+    /**
      * Bracket the current document by the {@code left} and {@code right} Strings,
      * indented by {@code indent} spaces.
      * <p>
@@ -1677,7 +1686,7 @@ public abstract class Doc {
     }
 
     /**
-     * Align subsequent lines of the current {@link Doc} to the current position in the line.
+     * Align any line breaks within this {@link Doc} to the line position at the start of the {@link Doc}.
      *
      * @param doc the input document
      * @return the aligned document.
@@ -2147,8 +2156,7 @@ public abstract class Doc {
         } else if (entryDoc instanceof Align) {
             // Eliminate Align
             Align alignDoc = (Align) entryDoc;
-            int newIndent = Math.max(0, position - entryIndent);
-            inQueue.addFirst(entry(newIndent, entryMargin, alignDoc.doc()));
+            inQueue.addFirst(entry(position, entryMargin, alignDoc.doc()));
         } else if (entryDoc instanceof Margin) {
             // Eliminate Margin
             Margin marginDoc = (Margin) entryDoc;
@@ -2173,7 +2181,7 @@ public abstract class Doc {
             outQueue.add(topEntry);
         } else if (entryDoc instanceof LineOr) {
             // Reset line length
-            position = entryIndent;
+            position = 0;
             // Note reverse order
             if (entryIndent > 0) {
                 // Send out the indent spaces
