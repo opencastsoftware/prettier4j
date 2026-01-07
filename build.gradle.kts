@@ -24,6 +24,7 @@ testing {
                     implementation(libs.equalsVerifier)
                     implementation(libs.toStringVerifier)
                     implementation(libs.apacheCommonsText)
+                    runtimeOnly(libs.junitPlatformLauncher)
                 }
             }
     }
