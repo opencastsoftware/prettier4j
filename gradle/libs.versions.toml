@@ -6,7 +6,7 @@ gradleJavaConventions = "0.2.0"
 hamcrest = "3.0"
 jacoco = "0.8.8"
 jqwik = "1.9.2"
-junit = "5.11.4"
+junit = "6.0.2"
 toStringVerifier = "1.4.8"
 
 [libraries]
@@ -16,6 +16,7 @@ equalsVerifier = { module = "nl.jqno.equalsverifier:equalsverifier", version.ref
 hamcrest = { module = "org.hamcrest:hamcrest", version.ref = "hamcrest" }
 jqwik = { module = "net.jqwik:jqwik", version.ref = "jqwik" }
 junitJupiter = { module = "org.junit.jupiter:junit-jupiter", version.ref = "junit" }
+junitPlatformLauncher = { module = "org.junit.platform:junit-platform-launcher", version.ref = "junit" }
 toStringVerifier = { module = "com.jparams:to-string-verifier", version.ref = "toStringVerifier" }
 
 [plugins]
