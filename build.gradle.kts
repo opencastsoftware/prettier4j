@@ -9,7 +9,7 @@ group = "com.opencastsoftware"
 
 description = "A Prettier Printer for Java"
 
-java { toolchain.languageVersion.set(JavaLanguageVersion.of(11)) }
+java { toolchain.languageVersion.set(JavaLanguageVersion.of(17)) }
 
 dependencies { compileOnlyApi(libs.apiGuardian) }
 
