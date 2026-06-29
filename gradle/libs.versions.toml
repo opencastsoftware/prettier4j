@@ -6,7 +6,7 @@ gradleJavaConventions = "0.2.0"
 hamcrest = "3.0"
 jacoco = "0.8.8"
 jqwik = "1.10.1"
-junit = "6.1.0"
+junit = "6.1.1"
 toStringVerifier = "1.4.8"
 
 [libraries]
