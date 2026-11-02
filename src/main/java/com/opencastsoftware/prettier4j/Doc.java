@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText:  © 2022-2025 Opencast Software Europe Ltd <https://opencastsoftware.com>
+ * SPDX-FileCopyrightText:  © 2022-2026 Opencast Software Europe Ltd <https://opencastsoftware.com>
  * SPDX-License-Identifier: Apache-2.0
  */
 package com.opencastsoftware.prettier4j;
@@ -801,7 +801,7 @@ public abstract class Doc {
 
         @Override
         Doc flatten() {
-            return doc.flatten().indent(indent);
+            return doc.flatten();
         }
 
         @Override
