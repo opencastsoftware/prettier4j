@@ -1976,7 +1976,13 @@ public abstract class Doc {
 
         while (!dummyInQueue.isEmpty()) {
             Entry topEntry = dummyInQueue.removeFirst();
-            leftPosition = layoutEntry(options, dummyInQueue, dummyOutQueue, topEntry, leftPosition);
+
+            if (topEntry.doc() instanceof Line) {
+                // Force a line break
+                leftPosition = Integer.MAX_VALUE;
+            } else {
+                leftPosition = layoutEntry(options, dummyInQueue, dummyOutQueue, topEntry, leftPosition);
+            }
 
             int remaining = options.lineWidth() - leftPosition;
 
