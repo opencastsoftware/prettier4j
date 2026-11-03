@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText:  © 2022-2025 Opencast Software Europe Ltd <https://opencastsoftware.com>
+ * SPDX-FileCopyrightText:  © 2022-2026 Opencast Software Europe Ltd <https://opencastsoftware.com>
  * SPDX-License-Identifier: Apache-2.0
  */
 package com.opencastsoftware.prettier4j;
@@ -296,6 +296,50 @@ public class DocTest {
         assertThat(inputDoc.render(80), is(equalTo(expectedWidth80)));
         assertThat(inputDoc.render(40), is(equalTo(expectedWidth40)));
         assertThat(inputDoc.render(20), is(equalTo(expectedWidth20)));
+    }
+
+    @Test
+    void testBracketWithHardLineBreaks() {
+        String expected = "{\n" +
+                          "  var x = 1;\n" +
+                          "  var y = 2;\n" +
+                          "  return x + y;\n" +
+                          "}";
+        String actual = Doc.intersperse(
+                            Doc.line(),
+                            Stream.of("var x = 1;", "var y = 2;", "return x + y;").map(Doc::text))
+                        .bracket(2, Doc.line(), Doc.text("{"), Doc.text("}"))
+                        .render(80);
+
+        assertThat(actual, is(equalTo(expected)));
+    }
+
+    @Test
+    void testNestedBracketWithHardLineBreaks() {
+        String expected = "{\n" +
+                          "  var x = 1;\n" +
+                          "  var y = 2;\n" +
+                          "  var z = {\n" +
+                          "    var a = 1;\n" +
+                          "    var b = 2;\n" +
+                          "    return a + b;\n" +
+                          "  }\n" +
+                          "  return x + y + z;\n" +
+                          "}";
+        String actual = Doc.intersperse(
+                            Doc.line(),
+                            Stream.of(
+                                Doc.text("var x = 1;"),
+                                Doc.text("var y = 2;"),
+                                Doc.intersperse(
+                                    Doc.line(),
+                                    Stream.of("var a = 1;", "var b = 2;", "return a + b;").map(Doc::text))
+                                        .bracket(2, Doc.text("var z = {"), Doc.text("}")),
+                                Doc.text("return x + y + z;")))
+                            .bracket(2, Doc.line(), Doc.text("{"), Doc.text("}"))
+                            .render(80);
+
+        assertThat(actual, is(equalTo(expected)));
     }
 
     @Test

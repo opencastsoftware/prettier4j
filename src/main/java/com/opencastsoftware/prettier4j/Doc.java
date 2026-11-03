@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText:  © 2022-2025 Opencast Software Europe Ltd <https://opencastsoftware.com>
+ * SPDX-FileCopyrightText:  © 2022-2026 Opencast Software Europe Ltd <https://opencastsoftware.com>
  * SPDX-License-Identifier: Apache-2.0
  */
 package com.opencastsoftware.prettier4j;
@@ -1974,7 +1974,13 @@ public abstract class Doc {
 
         while (!inQueue.isEmpty()) {
             Entry topEntry = inQueue.removeFirst();
-            leftPosition = layoutEntry(options, inQueue, outQueue, topEntry, leftPosition);
+
+            if (topEntry.doc() instanceof Line) {
+                // Force a line break
+                leftPosition = Integer.MAX_VALUE;
+            } else {
+                leftPosition = layoutEntry(options, inQueue, outQueue, topEntry, leftPosition);
+            }
 
             int remaining = options.lineWidth() - leftPosition;
 
