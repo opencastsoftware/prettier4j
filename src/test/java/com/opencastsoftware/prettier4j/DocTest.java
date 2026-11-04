@@ -84,7 +84,7 @@ public class DocTest {
     }
 
     @Test
-    void testAppendSpaceFlattening() {
+    void testAppendSpaceExpanded() {
         String expected = "one two three";
         String actual = group(text("one")
                 .appendSpace(text("two"))
@@ -104,7 +104,7 @@ public class DocTest {
     }
 
     @Test
-    void testAppendLineFlattening() {
+    void testAppendLineExpanded() {
         String expected = "one\ntwo\nthree";
         String actual = group(text("one")
                 .appendLine(text("two"))
@@ -142,7 +142,7 @@ public class DocTest {
     }
 
     @Test
-    void testAppendLineOrSpaceFlattening() {
+    void testAppendLineOrSpaceExpanded() {
         String expected = "one\ntwo\nthree";
         String actual = group(text("one")
                 .appendLineOrSpace(text("two"))
@@ -152,7 +152,7 @@ public class DocTest {
     }
 
     @Test
-    void testAppendLineOrSpaceWithAlignFlattening() {
+    void testAppendLineOrSpaceWithAlignExpanded() {
         String expected = "one two\n    three";
         String actual = text("one")
                 .appendSpace(group(align(text("two").appendLineOrSpace(text("three")))))
@@ -171,7 +171,7 @@ public class DocTest {
     }
 
     @Test
-    void testAppendLineOrEmptyFlattening() {
+    void testAppendLineOrEmptyExpanded() {
         String expected = "one\ntwo\nthree";
         String actual = group(text("one")
                 .appendLineOrEmpty(text("two"))
@@ -192,7 +192,7 @@ public class DocTest {
     }
 
     @Test
-    void testAppendLineOrFlattening() {
+    void testAppendLineOrExpanded() {
         String expected = "one\ntwo\nthree";
         String altText = "; ";
         String actual = group(text("one")
@@ -231,7 +231,7 @@ public class DocTest {
     }
 
     @Test
-    void testBracketFlattening() {
+    void testBracketExpanded() {
         String expected = "functionCall(\n  a,\n  b,\n  c\n)";
         String actual = text("functionCall")
                 .append(
@@ -245,7 +245,36 @@ public class DocTest {
     }
 
     @Test
-    void testBracketFlatteningWithAlign() {
+    void testMultipleGroupsOnLineRespectLineWidth() {
+        String expected =
+            "let headOption: { [A]: List[A] -> Option[A] } =\n" +
+            "  list -> match list with { case Cons { head } -> Some(head) }";
+
+        var matchCase = text("case Cons { head } -> Some(head)");
+
+        var match = text("match list with")
+                .appendSpace(matchCase.bracket(2, "{", "}"));
+
+        var lambda = text("list ->").appendSpace(match);
+
+        var typeVar = text("A").bracket(2, Doc.lineOrEmpty(), "[", "]");
+
+        var type = typeVar.append(text(":"))
+                .appendSpace(text("List").append(typeVar))
+                .appendSpace(text("->"))
+                .appendSpace(text("Option").append(typeVar))
+                .bracket(2, "{", "}");
+
+        var decl = text("let headOption:")
+                .appendSpace(type)
+                .appendSpace(text("="))
+                .append(group(lineOrSpace().append(lambda).indent(2)));
+
+        assertThat(decl.render(80), is(equalTo(expected)));
+    }
+
+    @Test
+    void testBracketExpandedWithAlign() {
         // Note: the arguments are aligned with the "functionCall" element because bracket doesn't support alignment.
         // TODO: Consider adding a `hangingBracket` combinator that aligns the bracket docs with the starting line position
         //       and the arguments with the opening bracket doc.
@@ -267,7 +296,7 @@ public class DocTest {
     }
 
     @Test
-    void testNestedBracketFlattening() {
+    void testNestedBracketExpanded() {
         String expectedWidth80 = "let x = functionCall(with, args, nestedFunctionCall(with, more, args))";
         String expectedWidth40 = "let x = functionCall(\n  with,\n  args,\n  nestedFunctionCall(with, more, args)\n)";
         String expectedWidth20 = "let x = functionCall(\n  with,\n  args,\n  nestedFunctionCall(\n    with,\n    more,\n    args\n  )\n)";
@@ -343,7 +372,7 @@ public class DocTest {
     }
 
     @Test
-    void testNestedBracketFlatteningWithAlign() {
+    void testNestedBracketExpandedWithAlign() {
         String expectedWidth80 = "let x = functionCall(with, args, nestedFunctionCall(with, more, args))";
         String expectedWidth40 =
                 "let x = functionCall(\n"+
@@ -842,7 +871,7 @@ public class DocTest {
     }
 
     @Test
-    void testNested16ColorFgStyleFlattening() {
+    void testNested16ColorFgStyleExpanded() {
         String expected =
                 sgrCode(37) + "(\n" +
                         "  " + sgrCode(32) + 'a' + sgrCode(37) + ",\n" +
@@ -895,7 +924,7 @@ public class DocTest {
     }
 
     @Test
-    void testNested256ColorFgStyleFlattening() {
+    void testNested256ColorFgStyleExpanded() {
         String expected =
                 xtermFgCode(255) + "(\n" +
                         "  " + xtermFgCode(128) + 'a' + xtermFgCode(255) + ",\n" +
@@ -948,7 +977,7 @@ public class DocTest {
     }
 
     @Test
-    void testNestedRgbColorFgStyleFlattening() {
+    void testNestedRgbColorFgStyleExpanded() {
         String expected =
                 rgbFgCode(20, 143, 119) + "(\n" +
                         "  " + rgbFgCode(220, 118, 51) + 'a' + rgbFgCode(20, 143, 119) + ",\n" +
@@ -1075,7 +1104,7 @@ public class DocTest {
     }
 
     @Test
-    void testNested16ColorBgStyleFlattening() {
+    void testNested16ColorBgStyleExpanded() {
         String expected =
                 sgrCode(47) + "(\n" +
                         "  " + sgrCode(42) + 'a' + sgrCode(47) + ",\n" +
@@ -1128,7 +1157,7 @@ public class DocTest {
     }
 
     @Test
-    void testNested256ColorBgStyleFlattening() {
+    void testNested256ColorBgStyleExpanded() {
         String expected =
                 xtermFgCode(255) + "(\n" +
                         "  " + xtermFgCode(128) + 'a' + xtermFgCode(255) + ",\n" +
@@ -1181,7 +1210,7 @@ public class DocTest {
     }
 
     @Test
-    void testNestedRgbColorBgStyleFlattening() {
+    void testNestedRgbColorBgStyleExpanded() {
         String expected =
                 rgbFgCode(20, 143, 119) + "(\n" +
                         "  " + rgbFgCode(220, 118, 51) + 'a' + rgbFgCode(20, 143, 119) + ",\n" +
