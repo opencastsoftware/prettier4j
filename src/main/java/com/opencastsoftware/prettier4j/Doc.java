@@ -1958,65 +1958,43 @@ public abstract class Doc {
      *
      * @param left     the preferred compact layout.
      * @param right    the expanded layout.
+     * @param inQueue  the layout input queue.
+     * @param outQueue the rendering output queue.
      * @param options  the options to use for rendering.
      * @param margin   the current margin.
      * @param indent   the current indentation level.
      * @param position the position in the current line.
-     * @return the entries of the chosen layout.
+     * @return the new position on the line after choosing which {@code Doc} to lay out.
      */
-    private static Queue<Entry> chooseLayout(Doc left, Doc right, RenderOptions options, Doc margin, int indent, int position) {
-        Deque<Entry> inQueue = new ArrayDeque<>();
-        Queue<Entry> outQueue = new ArrayDeque<>();
+    private static int chooseLayout(Doc left, Doc right, Deque<Entry> inQueue, Queue<Entry> outQueue, RenderOptions options, Doc margin, int indent, int position) {
+        Deque<Entry> dummyInQueue = new ArrayDeque<>();
+        Queue<Entry> dummyOutQueue = new ArrayDeque<>();
 
-        inQueue.add(entry(indent, margin, left));
+        dummyInQueue.add(entry(indent, margin, left));
 
         int leftPosition = position;
 
-        while (!inQueue.isEmpty()) {
-            Entry topEntry = inQueue.removeFirst();
+        while (!dummyInQueue.isEmpty()) {
+            Entry topEntry = dummyInQueue.removeFirst();
 
             if (topEntry.doc() instanceof Line) {
                 // Force a line break
                 leftPosition = Integer.MAX_VALUE;
             } else {
-                leftPosition = layoutEntry(options, inQueue, outQueue, topEntry, leftPosition);
+                leftPosition = layoutEntry(options, dummyInQueue, dummyOutQueue, topEntry, leftPosition);
             }
 
             int remaining = options.lineWidth() - leftPosition;
 
             if (remaining < 0) {
-                // The new entry doesn't fit, so use the right layout
-                return layout(right, options, margin, indent, position);
+                // The left layout doesn't fit, so use the right layout
+                inQueue.addFirst(entry(indent, margin, right));
+                return position;
             }
         }
 
-        return outQueue;
-    }
-
-    /**
-     * Traverses the input {@code doc} recursively, eliminating all nodes except for
-     * {@link Text}, {@link Escape}, {@link Reset}, {@link OpenLink}, {@link CloseLink}
-     * and subtypes of {@link LineOr}, and produces a queue of entries to be rendered.
-     *
-     * @param doc      the document to be rendered.
-     * @param options  the options to use for rendering.
-     * @param margin   the current margin.
-     * @param indent   the current indentation level.
-     * @param position the current position in the line.
-     * @return a queue of entries to be rendered.
-     */
-    private static Queue<Entry> layout(Doc doc, RenderOptions options, Doc margin, int indent, int position) {
-        Deque<Entry> inQueue = new ArrayDeque<>();
-        Queue<Entry> outQueue = new ArrayDeque<>();
-
-        inQueue.add(entry(indent, margin, doc));
-
-        while (!inQueue.isEmpty()) {
-            Entry topEntry = inQueue.removeFirst();
-            position = layoutEntry(options, inQueue, outQueue, topEntry, position);
-        }
-
-        return outQueue;
+        outQueue.addAll(dummyOutQueue);
+        return leftPosition;
     }
 
     /**
@@ -2172,10 +2150,9 @@ public abstract class Doc {
         } else if (entryDoc instanceof Alternatives) {
             // Eliminate Alternatives
             Alternatives altDoc = (Alternatives) entryDoc;
-            // These entries are already laid out
-            outQueue.addAll(chooseLayout(
-                altDoc.left(), altDoc.right(),
-                options, entryMargin, entryIndent, position));
+            position = chooseLayout(
+                altDoc.left(), altDoc.right(), inQueue, outQueue,
+                options, entryMargin, entryIndent, position);
         } else if (entryDoc instanceof WrapText) {
             // Eliminate WrapText
             WrapText wrapDoc = (WrapText) entryDoc;
