@@ -801,7 +801,7 @@ public abstract class Doc {
 
         @Override
         Doc flatten() {
-            return doc.flatten().indent(indent);
+            return doc.flatten();
         }
 
         @Override
